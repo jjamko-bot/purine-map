@@ -96,11 +96,11 @@ h1{font-size:1.25rem;font-weight:800;letter-spacing:-.02em}
 .reco-head h2{font-size:1.0625rem;font-weight:800;letter-spacing:-.01em}
 .reco-tag{font-size:0.75rem;font-weight:700;color:var(--green700);background:var(--green50);padding:3px 8px;border-radius:6px}
 .reco-btn{
-  margin-left:auto;border:0;background:var(--gray100);color:var(--gray700);border-radius:999px;
-  font-family:inherit;font-size:0.75rem;font-weight:700;padding:6px 11px;cursor:pointer;
-  display:inline-flex;align-items:center;gap:4px;
+  margin-left:auto;border:0;background:none;color:var(--gray600);border-radius:8px;
+  font-family:inherit;padding:6px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
 }
-.reco-btn .ic{width:12px;height:12px}
+.reco-btn .ic{width:20px;height:20px}
 .reco-btn:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px}
 .reco-scroll{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px 4px;scroll-snap-type:x proximity}
 .reco-scroll::-webkit-scrollbar{display:none}
@@ -465,7 +465,7 @@ function recoHTML(){
     <div class="reco-head">
       <h2>오늘 여기 어때요?</h2>
       <span class="reco-tag">안전한 곳 중에서</span>
-      <button class="reco-btn" data-act="shuffle">${ic("convert")} 다른 곳</button>
+      <button class="reco-btn" data-act="shuffle" aria-label="다른 곳 추천" title="다른 곳 추천">${ic("convert")}</button>
     </div>
     <div class="reco-scroll">${cards}</div>
   </section>`;
