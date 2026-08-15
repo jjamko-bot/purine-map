@@ -74,22 +74,21 @@ h1{font-size:1.25rem;font-weight:800;letter-spacing:-.02em}
 }
 .search::placeholder{color:var(--gray500)}
 .search:focus{outline:2px solid var(--carrot500);outline-offset:-1px}
-.tabs{display:flex;gap:6px;padding:10px 0 12px;overflow-x:auto;scrollbar-width:none}
+.tabs{display:flex;gap:20px;padding:2px 0 0;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tab{
-  flex-shrink:0;height:34px;padding:0 13px;border:1px solid var(--gray300);border-radius:999px;
-  background:var(--gray00);color:var(--gray900);font-family:inherit;font-size:0.875rem;font-weight:600;
+  flex-shrink:0;position:relative;height:42px;padding:0 2px;border:0;background:none;
+  color:var(--gray600);font-family:inherit;font-size:0.875rem;font-weight:600;
   cursor:pointer;display:flex;align-items:center;gap:5px;
 }
-.tab b{font-weight:700;color:var(--gray600);font-variant-numeric:tabular-nums}
-.tab:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px}
-.tab[data-on="1"]{border-color:transparent;color:var(--gray00)}
-.tab[data-on="1"] b{color:inherit;opacity:.75}
-.tab[data-g="all"][data-on="1"]{background:var(--gray900)}
-.tab[data-g="하"][data-on="1"]{background:var(--green600)}
-.tab[data-g="중"][data-on="1"]{background:var(--yellow600)}
-.tab[data-g="상"][data-on="1"]{background:var(--red600)}
-.tab[data-g="미"][data-on="1"]{background:var(--gray500)}
+.tab .tdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.tab b{font-weight:600;color:var(--gray500);font-variant-numeric:tabular-nums;font-size:0.8125rem}
+.tab:focus-visible{outline:2px solid var(--carrot500);outline-offset:-2px;border-radius:6px}
+.tab[data-on="1"]{color:var(--gray900);font-weight:700}
+.tab[data-on="1"] b{color:var(--gray600)}
+.tab[data-on="1"]::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:2px;border-radius:2px;background:var(--gray900);
+}
 
 /* ── 추천 모듈 ── */
 .reco{margin:20px 0 6px}
@@ -145,23 +144,34 @@ h1{font-size:1.25rem;font-weight:800;letter-spacing:-.02em}
 #mapwrap{display:none;padding-top:10px}
 body.mapon #mapwrap{display:block}
 body.mapon #list, body.mapon #footwrap{display:none}
-.hoods{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:10px}
+.hoods{
+  position:absolute;top:10px;left:10px;right:10px;z-index:20;
+  display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px;
+  pointer-events:none;
+}
 .hoods::-webkit-scrollbar{display:none}
 .hood{
-  flex-shrink:0;height:32px;padding:0 12px;border:1px solid var(--gray300);border-radius:999px;
+  pointer-events:auto;flex-shrink:0;height:34px;padding:0 13px;border:0;border-radius:999px;
   background:var(--gray00);color:var(--gray900);font-family:inherit;font-size:0.8125rem;font-weight:600;cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,0,0,.16);
 }
-.hood[data-on="1"]{background:var(--gray900);border-color:transparent;color:var(--gray00)}
+.hood[data-on="1"]{background:var(--gray900);color:var(--gray00)}
 .hood:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px}
 .mapbox{position:relative}
-#mapcv{width:100%;height:calc(100dvh - 280px);min-height:380px;display:block;background:var(--gray50);border:1px solid var(--gray200);border-radius:14px;touch-action:none;cursor:grab}
-#lmap{width:100%;height:calc(100dvh - 280px);min-height:380px;border:1px solid var(--gray200);border-radius:14px;overflow:hidden;background:var(--gray50);z-index:0}
+#mapcv{width:100%;height:calc(100dvh - 236px);min-height:400px;display:block;background:var(--gray50);border:1px solid var(--gray200);border-radius:14px;touch-action:none;cursor:grab}
+#lmap{width:100%;height:calc(100dvh - 236px);min-height:400px;border:1px solid var(--gray200);border-radius:14px;overflow:hidden;background:var(--gray50);z-index:0}
 #lmap.on ~ #mapcv{display:none}
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]) #lmap .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.92) saturate(.7)}
 }
 :root[data-theme="dark"] #lmap .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.92) saturate(.7)}
 #lmap .leaflet-control-attribution{font-size:10px;opacity:.75}
+#lmap .plabel{
+  background:transparent;border:0;box-shadow:none;padding:0;
+  font-weight:600;font-size:11px;color:var(--gray900);
+  text-shadow:0 1px 2px var(--gray00),0 -1px 2px var(--gray00),1px 0 2px var(--gray00),-1px 0 2px var(--gray00);
+}
+#lmap .plabel::before{display:none}
 .maptools{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:8px}
 .mbtn{
   width:40px;height:40px;border-radius:10px;border:1px solid var(--gray300);background:var(--gray00);color:var(--gray900);
@@ -277,10 +287,10 @@ body.mapon #list, body.mapon #footwrap{display:none}
 <main class="wrap" id="list"></main>
 
 <div class="wrap" id="mapwrap">
-  <div class="hoods" id="hoods"></div>
   <div class="mapbox">
     <div id="lmap" hidden></div>
     <canvas id="mapcv"></canvas>
+    <div class="hoods" id="hoods"></div>
     <div class="maptools">
       <button class="mbtn" id="zin" aria-label="확대"></button>
       <button class="mbtn" id="zout" aria-label="축소"></button>
@@ -380,9 +390,10 @@ function hoodsTop(){
 function renderTabs(){
   const c = counts();
   const defs = [["all","전체"],["하","안전"],["중","보통"],["상","주의"],["미","미분류"]];
-  document.getElementById("tabs").innerHTML = defs.map(([g,label]) =>
-    `<button class="tab" role="tab" data-g="${g}" data-on="${curTab===g?1:0}" aria-selected="${curTab===g}">${label} <b>${c[g]}</b></button>`
-  ).join("");
+  document.getElementById("tabs").innerHTML = defs.map(([g,label]) => {
+    const dot = GMETA[g] ? `<span class="tdot" style="background:${GMETA[g].dot}"></span>` : "";
+    return `<button class="tab" role="tab" data-g="${g}" data-on="${curTab===g?1:0}" aria-selected="${curTab===g}">${dot}${label} <b>${c[g]}</b></button>`;
+  }).join("");
   document.getElementById("headCount").textContent = DATA.length + "곳";
 }
 
@@ -802,6 +813,21 @@ document.getElementById("locbtn").addEventListener("click", ()=>{
 // 발급 후 여기에 넣고 빌드하면 활성화. 웹 키는 도메인 제한이라 공개되어도 안전.
 const NAVER_CLIENT_ID = "dton9zv6bt";
 let NMAP = null, nMarkers = [], nUser = null, naverTried = false;
+const lblCtx = document.createElement("canvas").getContext("2d");
+function declutter(items){
+  // items: [{x,y,name,grade,id}] (px) → 라벨 표시할 id Set. 안전 등급 우선.
+  lblCtx.font = "600 11px 'Pretendard Variable',sans-serif";
+  const order = {"하":0,"중":1,"상":2,"미":3};
+  const sorted = items.slice().sort((a,b) => order[a.grade]-order[b.grade]);
+  const taken = [], ok = new Set();
+  for(const it of sorted){
+    const w = lblCtx.measureText(it.name).width + 6;
+    const box = {x: it.x - w/2, y: it.y + 8, w, h: 15};
+    if(taken.some(t => box.x < t.x+t.w && t.x < box.x+box.w && box.y < t.y+t.h && t.y < box.y+box.h)) continue;
+    taken.push(box); ok.add(it.id);
+  }
+  return ok;
+}
 let autoLocated = false;
 function applyUserLoc(){
   if(!userLoc) return;
@@ -857,9 +883,16 @@ function initNaver(){
     zoom: cam?cam.z:12, minZoom: 6,
     logoControl: true, mapDataControl: false, scaleControl: false, zoomControl: false,
   });
+  let nzPrev = null;
+  naver.maps.Event.addListener(NMAP, "zoom_changed", () => {
+    const z = NMAP.getZoom();
+    if((nzPrev >= 13) !== (z >= 13)) nRefresh();
+    nzPrev = z;
+  });
   naver.maps.Event.addListener(NMAP, "idle", () => {
     const c = NMAP.getCenter();
     try{ store.setItem("pm-ncam", JSON.stringify({lat:c.lat(), lng:c.lng(), z:NMAP.getZoom()})); }catch(e){}
+    if(NMAP.getZoom() >= 13) nRefresh();
   });
   const boot = (tries) => {
     naver.maps.Event.trigger(NMAP, "resize");
@@ -880,14 +913,24 @@ function nvFit(pts){
 function nRefresh(){
   if(!NMAP) return;
   const GC = {"하":cssv("--green600"),"중":cssv("--yellow600"),"상":cssv("--red600"),"미":cssv("--gray500")};
+  const showLbl = NMAP.getZoom() >= 13;  // 동네 수준부터 가게명 표시 (네이버지도 스타일)
   nMarkers.forEach(m => m.setMap(null)); nMarkers = [];
+  let lblOk = new Set();
+  if(showLbl){
+    const proj = NMAP.getProjection();
+    lblOk = declutter(mapPlaces().map(p => {
+      const o = proj.fromCoordToOffset(new naver.maps.LatLng(p.y, p.x));
+      return {x:o.x, y:o.y, name:p.name, grade:gradeOf(p), id:p.id};
+    }));
+  }
   for(const p of mapPlaces()){
     const g = gradeOf(p);
     const size = sheetId===p.id ? 18 : 14;
+    const lbl = (showLbl && lblOk.has(p.id)) ? `<div style="position:absolute;top:${size+3}px;left:50%;transform:translateX(-50%);white-space:nowrap;font:600 11px Pretendard,'Pretendard Variable',sans-serif;color:#26282b;text-shadow:0 1px 2px #fff,0 -1px 2px #fff,1px 0 2px #fff,-1px 0 2px #fff">${esc(p.name)}</div>` : "";
     const mk = new naver.maps.Marker({
       position: new naver.maps.LatLng(p.y, p.x), map: NMAP, title: p.name,
       icon: {
-        content: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${GC[g]};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)"></div>`,
+        content: `<div style="position:relative;width:${size}px;height:${size}px"><div style="width:${size}px;height:${size}px;border-radius:50%;background:${GC[g]};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)"></div>${lbl}</div>`,
         anchor: new naver.maps.Point(size/2, size/2),
       },
     });
@@ -926,9 +969,16 @@ function initLeaflet(){
       try{ cam = JSON.parse(store.getItem("pm-lcam")); }catch(e){}
       if(cam && cam.z) LMAP.setView([cam.lat, cam.lng], cam.z);
       else lFit(mapPlaces());
+      let lzPrev = null;
+      LMAP.on("zoomend", () => {
+        const z = LMAP.getZoom();
+        if((lzPrev >= 13) !== (z >= 13)) lRefresh();
+        lzPrev = z;
+      });
       LMAP.on("moveend", () => {
         const c = LMAP.getCenter();
         try{ store.setItem("pm-lcam", JSON.stringify({lat:c.lat, lng:c.lng, z:LMAP.getZoom()})); }catch(e){}
+        if(LMAP.getZoom() >= 13) lRefresh();
       });
       lRefresh();
       autoLocate();
@@ -946,12 +996,21 @@ function lRefresh(){
   if(!LMAP || !lLayer) return;
   const GC = {"하":cssv("--green600"),"중":cssv("--yellow600"),"상":cssv("--red600"),"미":cssv("--gray500")};
   lLayer.clearLayers();
+  const showLbl = LMAP.getZoom() >= 13;
+  let lblOk = new Set();
+  if(showLbl){
+    lblOk = declutter(mapPlaces().map(p => {
+      const o = LMAP.latLngToContainerPoint([p.y, p.x]);
+      return {x:o.x, y:o.y, name:p.name, grade:gradeOf(p), id:p.id};
+    }));
+  }
   for(const p of mapPlaces()){
     const g = gradeOf(p);
     const mk = L.circleMarker([p.y, p.x], {
       radius: sheetId===p.id?9:7, color:"#fff", weight:2, fillColor:GC[g], fillOpacity:1
     });
-    mk.bindTooltip(p.name, {direction:"top", offset:[0,-8], opacity:0.95});
+    if(showLbl && lblOk.has(p.id)) mk.bindTooltip(p.name, {permanent:true, direction:"bottom", offset:[0,7], className:"plabel"});
+    else mk.bindTooltip(p.name, {direction:"top", offset:[0,-8], opacity:0.95});
     mk.on("click", () => openSheet(p.id));
     mk.addTo(lLayer);
   }
