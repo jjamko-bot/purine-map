@@ -61,13 +61,6 @@ body > header{position:sticky;top:0;z-index:10;background:var(--gray00);border-b
 h1{font-size:1.25rem;font-weight:800;letter-spacing:-.02em}
 .logo{width:26px;height:18px;flex-shrink:0}
 .head-count{font-size:0.8125rem;color:var(--gray600);font-variant-numeric:tabular-nums}
-.updbtn{
-  margin-left:auto;height:34px;padding:0 12px;border-radius:999px;display:flex;align-items:center;gap:4px;
-  color:var(--gray700);background:var(--gray100);text-decoration:none;
-  font-size:0.75rem;font-weight:700;
-}
-.updbtn .ic{width:14px;height:14px}
-.updbtn:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px}
 .search{
   width:100%;height:40px;padding:0 14px;border:0;border-radius:10px;
   background:var(--gray100);color:var(--gray900);font-size:0.9375rem;font-family:inherit;
@@ -332,7 +325,6 @@ body.mapon #list, body.mapon #footwrap{display:none}
       </svg>
       <h1>퓨린 신호등</h1>
       <span class="head-count" id="headCount"></span>
-      <a class="updbtn" id="updateLink" href="https://claude.ai/code/routines/trig_011mscPQVkciiHTsTDbvAUxa" target="_blank" rel="noopener" aria-label="데이터 갱신" title="데이터 갱신"></a>
     </div>
     <input class="search" id="q" type="search" placeholder="가게 이름 · 업종 · 동네 검색" autocomplete="off">
     <div class="tabs" id="tabs" role="tablist"></div>
@@ -1369,7 +1361,6 @@ if(window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListene
 document.getElementById("zin").innerHTML = ic("add");
 document.getElementById("zout").innerHTML = ic("subtraction");
 document.getElementById("locbtn").innerHTML = ic("gps");
-document.getElementById("updateLink").innerHTML = ic("retry") + "갱신";
 renderHoods();
 setView();
 render();
