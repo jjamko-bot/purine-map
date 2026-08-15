@@ -9,14 +9,28 @@ export default async function handler(req, res) {
   const url = `https://map.naver.com/p/api/search/instant-search?query=${encodeURIComponent(q)}${
     /^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(c) ? `&coords=${c}` : ""
   }`;
+  const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
   try {
+    // 쿠키 부트스트랩: 맵 홈에서 NNB 등 세션 쿠키 획득 (봇 감지 완화)
+    let cookie = "";
+    try {
+      const home = await fetch("https://map.naver.com/", { headers: { "User-Agent": UA, "Accept-Language": "ko-KR,ko;q=0.9" }, redirect: "follow" });
+      const sc = typeof home.headers.getSetCookie === "function" ? home.headers.getSetCookie() : [home.headers.get("set-cookie") || ""];
+      cookie = sc.filter(Boolean).map((c) => c.split(";")[0]).join("; ");
+    } catch {}
     const r = await fetch(url, {
       headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36",
+        "User-Agent": UA,
         Referer: "https://map.naver.com/",
-        "Accept-Language": "ko-KR,ko;q=0.9",
-        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8",
+        Accept: "application/json, text/plain, */*",
+        "sec-ch-ua": '"Chromium";v="126", "Google Chrome";v="126", "Not-A.Brand";v="99"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"macOS"',
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-origin",
+        ...(cookie ? { Cookie: cookie } : {}),
       },
     });
     if (!r.ok) return res.status(502).json({ error: `upstream ${r.status}` });
