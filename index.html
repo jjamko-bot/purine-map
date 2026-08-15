@@ -140,12 +140,14 @@ h1{font-size:1.25rem;font-weight:800;letter-spacing:-.02em}
 }
 .empty{padding:48px 0;text-align:center;color:var(--gray600);font-size:0.875rem}
 
-/* ── 지도 ── */
-#mapwrap{display:none;padding-top:10px}
-body.mapon #mapwrap{display:block}
+/* ── 지도 (풀스크린 풀블리드) ── */
+#mapwrap{display:none}
+body.mapon{height:100dvh;overflow:hidden;padding-bottom:0;display:flex;flex-direction:column}
+body.mapon > header{flex:none}
+body.mapon #mapwrap{display:block;flex:1;min-height:0;max-width:none;width:100%;padding:0;margin:0}
 body.mapon #list, body.mapon #footwrap{display:none}
 .hoods{
-  position:absolute;top:10px;left:10px;right:10px;z-index:20;
+  position:absolute;top:12px;left:12px;right:12px;z-index:20;
   display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px;
   pointer-events:none;
 }
@@ -157,9 +159,9 @@ body.mapon #list, body.mapon #footwrap{display:none}
 }
 .hood[data-on="1"]{background:var(--gray900);color:var(--gray00)}
 .hood:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px}
-.mapbox{position:relative}
-#mapcv{width:100%;height:calc(100dvh - 174px);min-height:420px;display:block;background:var(--gray50);border:1px solid var(--gray200);border-radius:14px;touch-action:none;cursor:grab}
-#lmap{width:100%;height:calc(100dvh - 174px);min-height:420px;border:1px solid var(--gray200);border-radius:14px;overflow:hidden;background:var(--gray50);z-index:0}
+.mapbox{position:relative;height:100%}
+#mapcv{width:100%;height:100%;display:block;background:var(--gray50);touch-action:none;cursor:grab}
+#lmap{width:100%;height:100%;overflow:hidden;background:var(--gray50);z-index:0}
 #lmap.on ~ #mapcv{display:none}
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]) #lmap .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.92) saturate(.7)}
@@ -172,8 +174,7 @@ body.mapon #list, body.mapon #footwrap{display:none}
   text-shadow:0 1px 2px var(--gray00),0 -1px 2px var(--gray00),1px 0 2px var(--gray00),-1px 0 2px var(--gray00);
 }
 #lmap .plabel::before{display:none}
-.maptools{position:absolute;right:10px;bottom:14px;display:flex;flex-direction:column;gap:8px;z-index:20}
-body.mapon{padding-bottom:10px}
+.maptools{position:absolute;right:12px;bottom:calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;z-index:20}
 .mbtn{
   width:40px;height:40px;border-radius:10px;border:1px solid var(--gray300);background:var(--gray00);color:var(--gray900);
   font-family:inherit;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.1);
@@ -319,8 +320,8 @@ const DATA = [{"id":"1906391798","name":"최고집 손칼국수","cat":"칼국�
 /*__DATA_LINE__*/
 const GRADES = ["하","중","상","미"];
 const GMETA = {
-  "하":{label:"안전", full:"안전 — 퓨린 낮음", hint:"오늘 가기 좋은 곳", col:"var(--green700)", dot:"var(--green600)", soft:"var(--green50)"},
-  "중":{label:"보통", full:"보통 — 적당히", hint:"양 조절하면 OK", col:"var(--yellow700)", dot:"var(--yellow600)", soft:"var(--yellow50)"},
+  "하":{label:"안전", full:"안전 — 퓨린 낮음", hint:"마음 편히 가도 되는 곳", col:"var(--green700)", dot:"var(--green600)", soft:"var(--green50)"},
+  "중":{label:"보통", full:"보통 — 적당히", hint:"양 조절하면 괜찮아요", col:"var(--yellow700)", dot:"var(--yellow600)", soft:"var(--yellow50)"},
   "상":{label:"주의", full:"주의 — 고퓨린", hint:"가끔만, 조심해서", col:"var(--red700)", dot:"var(--red600)", soft:"var(--red50)"},
   "미":{label:"미분류", full:"미분류", hint:"등급을 직접 지정해 주세요", col:"var(--gray700)", dot:"var(--gray500)", soft:"var(--gray100)"},
 };
