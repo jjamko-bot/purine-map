@@ -155,6 +155,13 @@ body.mapon #list, body.mapon #footwrap{display:none}
 .hood:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px}
 .mapbox{position:relative}
 #mapcv{width:100%;height:calc(100dvh - 280px);min-height:380px;display:block;background:var(--gray50);border:1px solid var(--gray200);border-radius:14px;touch-action:none;cursor:grab}
+#lmap{width:100%;height:calc(100dvh - 280px);min-height:380px;border:1px solid var(--gray200);border-radius:14px;overflow:hidden;background:var(--gray50);z-index:0}
+#lmap.on ~ #mapcv{display:none}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) #lmap .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.92) saturate(.7)}
+}
+:root[data-theme="dark"] #lmap .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.92) saturate(.7)}
+#lmap .leaflet-control-attribution{font-size:10px;opacity:.75}
 .maptools{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:8px}
 .mbtn{
   width:40px;height:40px;border-radius:10px;border:1px solid var(--gray300);background:var(--gray00);color:var(--gray900);
@@ -272,6 +279,7 @@ body.mapon #list, body.mapon #footwrap{display:none}
 <div class="wrap" id="mapwrap">
   <div class="hoods" id="hoods"></div>
   <div class="mapbox">
+    <div id="lmap" hidden></div>
     <canvas id="mapcv"></canvas>
     <div class="maptools">
       <button class="mbtn" id="zin" aria-label="확대"></button>
@@ -623,6 +631,7 @@ function fitMap(pts){
   M.k = Math.max(40, Math.min(M.k, 60000));
 }
 function drawMap(){
+  if(LMAP){ lRefresh(); return; }
   if(!cv.width) sizeCanvas();
   const r = cv.getBoundingClientRect();
   const GC = {"하":cssv("--green600"),"중":cssv("--yellow600"),"상":cssv("--red600"),"미":cssv("--gray500")};
@@ -688,6 +697,7 @@ document.getElementById("hoods").addEventListener("click", e => {
   curHood = b.dataset.h;
   renderHoods();
   const pts = curHood ? DATA.filter(p => p.x && p.addr.includes(curHood)) : mapPlaces();
+  if(LMAP){ lFit(pts); return; }
   fitMap(pts); saveCam(); drawMap();
 });
 function toast(msg){
@@ -698,10 +708,16 @@ function toast(msg){
 function mapJump(){
   if(query.length >= 2){
     const d = GEO.names.find(n => n[2].includes(query));
-    if(d){ M.cx = d[0]; M.cy = mercY(d[1]); M.k = Math.max(M.k, 6000); saveCam(); drawMap(); return; }
+    if(d){
+      if(LMAP){ LMAP.setView([d[1], d[0]], Math.max(LMAP.getZoom(), 13)); return; }
+      M.cx = d[0]; M.cy = mercY(d[1]); M.k = Math.max(M.k, 6000); saveCam(); drawMap(); return;
+    }
   }
   const pts = mapPlaces();
-  if(query && pts.length){ fitMap(pts); saveCam(); drawMap(); }
+  if(query && pts.length){
+    if(LMAP){ lFit(pts); return; }
+    fitMap(pts); saveCam(); drawMap();
+  }
 }
 const ptrs = new Map();
 let panStart = null, pinchStart = null, moved = 0;
@@ -759,16 +775,89 @@ cv.addEventListener("wheel", e => {
   M.cx = wx - (mx-rect.width/2)/M.k; M.cy = wy - (my-rect.height/2)/M.k;
   saveCam(); drawMap();
 }, {passive:false});
-document.getElementById("zin").addEventListener("click", ()=>{ M.k=Math.min(M.k*1.5,60000); saveCam(); drawMap(); });
-document.getElementById("zout").addEventListener("click", ()=>{ M.k=Math.max(M.k/1.5,40); saveCam(); drawMap(); });
+document.getElementById("zin").addEventListener("click", ()=>{
+  if(LMAP) return LMAP.zoomIn();
+  M.k=Math.min(M.k*1.5,60000); saveCam(); drawMap();
+});
+document.getElementById("zout").addEventListener("click", ()=>{
+  if(LMAP) return LMAP.zoomOut();
+  M.k=Math.max(M.k/1.5,40); saveCam(); drawMap();
+});
 document.getElementById("locbtn").addEventListener("click", ()=>{
   if(!navigator.geolocation) return toast("이 환경에서는 위치 기능을 쓸 수 없어요");
   navigator.geolocation.getCurrentPosition(pos => {
     userLoc = {x:pos.coords.longitude, y:pos.coords.latitude};
+    if(LMAP){
+      if(lUser) lUser.remove();
+      lUser = L.circleMarker([userLoc.y, userLoc.x], {radius:7, color:"#fff", weight:2, fillColor:"#0088cc", fillOpacity:1}).addTo(LMAP);
+      LMAP.setView([userLoc.y, userLoc.x], Math.max(LMAP.getZoom(), 15));
+      return;
+    }
     M.cx = userLoc.x; M.cy = mercY(userLoc.y); M.k = Math.max(M.k, 8000);
     saveCam(); drawMap();
   }, ()=>toast("위치 권한이 막혀 있어요 — 동네 칩이나 검색으로 이동해 보세요"), {timeout:5000});
 });
+
+/* ── 실지도 (Leaflet + OSM) — 외부 요청이 가능한 환경(공개 배포)에서만 활성화, 차단 시 캔버스 폴백 ── */
+let LMAP = null, lLayer = null, lUser = null, leafletTried = false;
+function tryLeaflet(){
+  if(leafletTried || window.L) return;
+  leafletTried = true;
+  const css = document.createElement("link");
+  css.rel = "stylesheet"; css.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+  document.head.appendChild(css);
+  const s = document.createElement("script");
+  s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+  s.onload = initLeaflet;
+  s.onerror = () => {}; // 차단(아티팩트) → 캔버스 유지
+  document.head.appendChild(s);
+}
+function initLeaflet(){
+  try{
+    const el = document.getElementById("lmap");
+    el.hidden = false; el.classList.add("on");
+    LMAP = L.map(el, {zoomControl:false, attributionControl:true});
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19, attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(LMAP);
+    lLayer = L.layerGroup().addTo(LMAP);
+    LMAP.setView([37.5, 127.0], 10); // 임시 — 사이즈 확보 후 재설정
+    const boot = (tries) => {
+      LMAP.invalidateSize();
+      if(LMAP.getSize().x < 50 && tries < 25) return setTimeout(()=>boot(tries+1), 200);
+      let cam = null;
+      try{ cam = JSON.parse(store.getItem("pm-lcam")); }catch(e){}
+      if(cam && cam.z) LMAP.setView([cam.lat, cam.lng], cam.z);
+      else lFit(mapPlaces());
+      LMAP.on("moveend", () => {
+        const c = LMAP.getCenter();
+        try{ store.setItem("pm-lcam", JSON.stringify({lat:c.lat, lng:c.lng, z:LMAP.getZoom()})); }catch(e){}
+      });
+      lRefresh();
+    };
+    setTimeout(()=>boot(0), 120);
+  }catch(e){ LMAP = null; }
+}
+function lFit(pts){
+  if(!LMAP) return;
+  if(!pts.length) pts = DATA.filter(p=>p.x);
+  const b = L.latLngBounds(pts.map(p=>[p.y, p.x]));
+  LMAP.fitBounds(b, {padding:[36,36], maxZoom:16});
+}
+function lRefresh(){
+  if(!LMAP || !lLayer) return;
+  const GC = {"하":cssv("--green600"),"중":cssv("--yellow600"),"상":cssv("--red600"),"미":cssv("--gray500")};
+  lLayer.clearLayers();
+  for(const p of mapPlaces()){
+    const g = gradeOf(p);
+    const mk = L.circleMarker([p.y, p.x], {
+      radius: sheetId===p.id?9:7, color:"#fff", weight:2, fillColor:GC[g], fillOpacity:1
+    });
+    mk.bindTooltip(p.name, {direction:"top", offset:[0,-8], opacity:0.95});
+    mk.on("click", () => openSheet(p.id));
+    mk.addTo(lLayer);
+  }
+}
 
 /* ── 뷰 전환 ── */
 function setView(){
@@ -777,6 +866,8 @@ function setView(){
   document.body.classList.toggle("mapon", curView==="map");
   store.setItem("pm-view", curView);
   if(curView==="map"){
+    tryLeaflet();
+    if(LMAP){ setTimeout(()=>{ LMAP.invalidateSize(); lRefresh(); }, 60); return; }
     sizeCanvas();
     if(!M.inited){ fitMap(mapPlaces()); M.inited = true; saveCam(); }
     drawMap();
