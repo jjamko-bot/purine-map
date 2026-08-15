@@ -815,11 +815,18 @@ document.getElementById("locbtn").addEventListener("click", ()=>{
 /* ── 실지도 3단 폴백: 네이버 지도 SDK → Leaflet+OSM → 내장 캔버스 ── */
 // 네이버 클라우드 플랫폼 Maps의 Client ID(ncpKeyId). 비워두면 네이버 지도는 건너뛴다.
 // 발급 후 여기에 넣고 빌드하면 활성화. 웹 키는 도메인 제한이라 공개되어도 안전.
-const NAVER_CLIENT_ID = "";
+const NAVER_CLIENT_ID = "dton9zv6bt";
 let NMAP = null, nMarkers = [], nUser = null, naverTried = false;
 function tryNaver(){
   if(naverTried || !NAVER_CLIENT_ID) { if(!NAVER_CLIENT_ID) tryLeaflet(); return; }
   naverTried = true;
+  // 키 인증 실패(미등록 도메인 등) 시 네이버 SDK가 이 전역 콜백을 호출 → Leaflet 폴백
+  window.navermap_authFailure = function(){
+    NMAP = null; nMarkers = [];
+    const el = document.getElementById("lmap");
+    el.innerHTML = ""; el.classList.remove("on"); el.hidden = true;
+    tryLeaflet();
+  };
   const s = document.createElement("script");
   s.src = "https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=" + encodeURIComponent(NAVER_CLIENT_ID);
   s.onload = () => { try{ initNaver(); }catch(e){ tryLeaflet(); } };
