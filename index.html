@@ -213,14 +213,32 @@ body.mapon #list, body.mapon #footwrap{display:none}
 }
 #lmap .plabel::before{display:none}
 .maptools{position:absolute;right:12px;bottom:calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;z-index:20}
-.scanbtn{
+.scanwrap{
   position:absolute;left:50%;bottom:calc(76px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;
+  display:flex;align-items:center;
+}
+.scanbtn{
   height:38px;padding:0 16px;border:0;border-radius:999px;background:#ffffff;color:#26282b;
-  font-family:inherit;font-size:0.8125rem;font-weight:700;cursor:pointer;
+  font-family:inherit;font-size:0.8125rem;font-weight:700;cursor:pointer;white-space:nowrap;
   box-shadow:0 2px 10px rgba(0,0,0,.22);
 }
 .scanbtn:disabled{opacity:.6}
 .scanbtn:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px}
+/* 판정 결과 pill — 지도 오버레이라 앱 테마 무시, 고정 라이트 팔레트 (v8.10 원칙) */
+.scanres{display:flex;align-items:center;height:38px;border-radius:999px;background:#ffffff;box-shadow:0 2px 10px rgba(0,0,0,.22)}
+.scanres[hidden]{display:none}
+.sr-seg{
+  height:38px;padding:0 11px;border:0;background:transparent;color:#26282b;font-family:inherit;cursor:pointer;
+  display:flex;align-items:center;font-size:0.8125rem;font-weight:700;
+}
+.sr-seg + .sr-seg{border-left:1px solid #eaebee}
+.sr-seg:first-child{border-radius:999px 0 0 999px;padding-left:14px}
+.sr-seg:last-child{border-radius:0 999px 999px 0;padding-right:14px}
+.sr-seg:focus-visible{outline:2px solid var(--carrot500);outline-offset:-2px}
+.sr-seg .ic{width:15px;height:15px}
+.sr-sum{gap:8px}
+.sr-pair{display:flex;align-items:center;gap:4px}
+.sr-dot{width:8px;height:8px;border-radius:50%;flex:none}
 .mbtn{
   width:40px;height:40px;border-radius:10px;border:1px solid var(--gray300);background:var(--gray00);color:var(--gray900);
   font-family:inherit;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.1);
@@ -229,7 +247,7 @@ body.mapon #list, body.mapon #footwrap{display:none}
 .mbtn .ic{width:18px;height:18px}
 .mbtn:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px}
 .maptoast{
-  position:absolute;left:50%;transform:translateX(-50%);bottom:64px;background:var(--gray900);color:var(--gray00);
+  position:absolute;left:50%;transform:translateX(-50%);bottom:calc(128px + env(safe-area-inset-bottom));z-index:35;background:var(--gray900);color:var(--gray00);
   font-size:0.8125rem;font-weight:600;padding:9px 16px;border-radius:999px;display:none;white-space:nowrap;max-width:92%;
 }
 
@@ -329,7 +347,14 @@ body.mapon #list, body.mapon #footwrap{display:none}
     <div id="lmap" hidden></div>
     <canvas id="mapcv"></canvas>
     <div class="hoods" id="hoods"></div>
-    <button class="scanbtn" id="scanbtn">이 주변 판정</button>
+    <div class="scanwrap">
+      <button class="scanbtn" id="scanbtn">이 주변 판정</button>
+      <div class="scanres" id="scanres" hidden>
+        <button class="sr-seg" id="scanre" aria-label="이 위치에서 다시 판정"></button>
+        <button class="sr-seg sr-sum" id="scanfit" aria-label="판정 결과 요약"></button>
+        <button class="sr-seg" id="scanclear" aria-label="판정 결과 지우기"></button>
+      </div>
+    </div>
     <div class="maptools">
       <button class="mbtn" id="zin" aria-label="확대"></button>
       <button class="mbtn" id="zout" aria-label="축소"></button>
@@ -1131,6 +1156,7 @@ function initNaver(){
     if(NMAP.getZoom() >= 13) nRefresh();
   });
   const boot = (tries) => {
+    if(!NMAP || !window.naver || !naver.maps) return; // authFailure로 SDK가 내려간 뒤 타이머가 도는 경우
     naver.maps.Event.trigger(NMAP, "resize");
     if(el.clientWidth < 50 && tries < 25) return setTimeout(()=>boot(tries+1), 200);
     if(!cam) nvFit(mapPlaces());
@@ -1273,22 +1299,47 @@ function lRefresh(){
 }
 
 /* ── 이 주변 판정 ── */
-document.getElementById("scanbtn").addEventListener("click", () => {
-  const btn = document.getElementById("scanbtn");
+// 결과 피드백은 토스트 대신 상태 pill(scanres): ↻ 재판정 · 등급별 카운트(탭=범위 fit) · ✕ 지우기
+const scanBtn = document.getElementById("scanbtn"), scanRes = document.getElementById("scanres"), scanSum = document.getElementById("scanfit");
+document.getElementById("scanre").innerHTML = ic("retry");
+document.getElementById("scanclear").innerHTML = ic("close");
+function scanShow(state){ // "idle" | "loading" | "res"
+  scanBtn.hidden = state === "res";
+  scanRes.hidden = state !== "res";
+  scanBtn.disabled = state === "loading";
+  scanBtn.textContent = state === "loading" ? "판정 중…" : "이 주변 판정";
+}
+function runScan(){
   let lat = null, lng = null;
   if(NMAP){ const ct = NMAP.getCenter(); lat = ct.lat(); lng = ct.lng(); }
   else if(LMAP){ const ct = LMAP.getCenter(); lat = ct.lat; lng = ct.lng; }
   else return toast("이 환경에서는 주변 판정을 쓸 수 없어요");
-  btn.disabled = true; btn.textContent = "판정 중…";
+  scanShow("loading");
   fetch(`${API_BASE}/api/search?q=${encodeURIComponent("음식점")}&c=${lat.toFixed(5)},${lng.toFixed(5)}&n=30`)
     .then(r => r.ok ? r.json() : Promise.reject())
     .then(j => {
       nearby = (j.places||[]).filter(p => !DATA.some(d => d.id === p.id));
       drawMap();
-      toast(`주변 ${nearby.length}곳 판정 완료 — 링 모양 마커를 눌러보세요`);
+      if(!nearby.length){ scanShow("idle"); toast("이 주변엔 새로 판정할 곳이 없어요"); return; }
+      const cnt = {"하":0,"중":0,"상":0,"미":0};
+      for(const p of nearby) cnt[gradePlaceCat(p.cat).grade]++;
+      const COL = {"하":"#128c6e","중":"#a66c21","상":"#fa2314","미":"#adb1ba"};
+      const LBL = {"하":"안전","중":"보통","상":"주의","미":"분석 불가"};
+      const gs = ["하","중","상","미"].filter(g => cnt[g]);
+      scanSum.innerHTML = gs.map(g => `<span class="sr-pair"><span class="sr-dot" style="background:${COL[g]}"></span>${cnt[g]}</span>`).join("");
+      scanSum.setAttribute("aria-label", `주변 ${nearby.length}곳 — ` + gs.map(g => `${LBL[g]} ${cnt[g]}곳`).join(", ") + " (탭하면 결과 범위 보기)");
+      scanShow("res");
     })
-    .catch(() => toast("주변 판정에 실패했어요 — 잠시 후 다시"))
-    .finally(() => { btn.disabled = false; btn.textContent = "이 주변 판정"; });
+    .catch(() => { scanShow(nearby.length ? "res" : "idle"); toast("주변 판정에 실패했어요 — 잠시 후 다시"); });
+}
+scanBtn.addEventListener("click", runScan);
+document.getElementById("scanre").addEventListener("click", runScan);
+document.getElementById("scanclear").addEventListener("click", () => { nearby = []; drawMap(); scanShow("idle"); });
+scanSum.addEventListener("click", () => {
+  const pts = nearby.filter(p => p.x);
+  if(!pts.length) return;
+  if(NMAP) nvFit(pts);
+  else if(LMAP) lFit(pts);
 });
 
 /* ── 뷰 전환 ── */
