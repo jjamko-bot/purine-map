@@ -793,22 +793,7 @@ document.getElementById("locbtn").addEventListener("click", ()=>{
   if(!navigator.geolocation) return toast("이 환경에서는 위치 기능을 쓸 수 없어요");
   navigator.geolocation.getCurrentPosition(pos => {
     userLoc = {x:pos.coords.longitude, y:pos.coords.latitude};
-    if(NMAP){
-      if(nUser) nUser.setMap(null);
-      nUser = new naver.maps.Marker({position:new naver.maps.LatLng(userLoc.y,userLoc.x), map:NMAP,
-        icon:{content:'<div style="width:16px;height:16px;border-radius:50%;background:#0088cc;border:2px solid #fff"></div>', anchor:new naver.maps.Point(8,8)}});
-      NMAP.setCenter(new naver.maps.LatLng(userLoc.y, userLoc.x));
-      if(NMAP.getZoom() < 15) NMAP.setZoom(15, true);
-      return;
-    }
-    if(LMAP){
-      if(lUser) lUser.remove();
-      lUser = L.circleMarker([userLoc.y, userLoc.x], {radius:7, color:"#fff", weight:2, fillColor:"#0088cc", fillOpacity:1}).addTo(LMAP);
-      LMAP.setView([userLoc.y, userLoc.x], Math.max(LMAP.getZoom(), 15));
-      return;
-    }
-    M.cx = userLoc.x; M.cy = mercY(userLoc.y); M.k = Math.max(M.k, 8000);
-    saveCam(); drawMap();
+    applyUserLoc();
   }, ()=>toast("위치 권한이 막혀 있어요 — 동네 칩이나 검색으로 이동해 보세요"), {timeout:5000});
 });
 
@@ -817,6 +802,34 @@ document.getElementById("locbtn").addEventListener("click", ()=>{
 // 발급 후 여기에 넣고 빌드하면 활성화. 웹 키는 도메인 제한이라 공개되어도 안전.
 const NAVER_CLIENT_ID = "dton9zv6bt";
 let NMAP = null, nMarkers = [], nUser = null, naverTried = false;
+let autoLocated = false;
+function applyUserLoc(){
+  if(!userLoc) return;
+  if(NMAP){
+    if(nUser) nUser.setMap(null);
+    nUser = new naver.maps.Marker({position:new naver.maps.LatLng(userLoc.y,userLoc.x), map:NMAP,
+      icon:{content:'<div style="width:16px;height:16px;border-radius:50%;background:#0088cc;border:2px solid #fff;box-shadow:0 0 0 4px rgba(0,136,204,.25)"></div>', anchor:new naver.maps.Point(8,8)}});
+    NMAP.setCenter(new naver.maps.LatLng(userLoc.y, userLoc.x));
+    if(NMAP.getZoom() < 14) NMAP.setZoom(14, true);
+    return;
+  }
+  if(LMAP){
+    if(lUser) lUser.remove();
+    lUser = L.circleMarker([userLoc.y, userLoc.x], {radius:7, color:"#fff", weight:2, fillColor:"#0088cc", fillOpacity:1}).addTo(LMAP);
+    LMAP.setView([userLoc.y, userLoc.x], Math.max(LMAP.getZoom(), 14));
+    return;
+  }
+  M.cx = userLoc.x; M.cy = mercY(userLoc.y); M.k = Math.max(M.k, 8000);
+  saveCam(); drawMap();
+}
+function autoLocate(){
+  if(autoLocated || !navigator.geolocation) return;
+  autoLocated = true;
+  navigator.geolocation.getCurrentPosition(pos => {
+    userLoc = {x:pos.coords.longitude, y:pos.coords.latitude};
+    applyUserLoc();
+  }, ()=>{}, {timeout:6000, maximumAge:300000});
+}
 function tryNaver(){
   if(naverTried || !NAVER_CLIENT_ID) { if(!NAVER_CLIENT_ID) tryLeaflet(); return; }
   naverTried = true;
@@ -853,6 +866,7 @@ function initNaver(){
     if(el.clientWidth < 50 && tries < 25) return setTimeout(()=>boot(tries+1), 200);
     if(!cam) nvFit(mapPlaces());
     nRefresh();
+    autoLocate();
   };
   setTimeout(()=>boot(0), 120);
 }
@@ -917,6 +931,7 @@ function initLeaflet(){
         try{ store.setItem("pm-lcam", JSON.stringify({lat:c.lat, lng:c.lng, z:LMAP.getZoom()})); }catch(e){}
       });
       lRefresh();
+      autoLocate();
     };
     setTimeout(()=>boot(0), 120);
   }catch(e){ LMAP = null; }
