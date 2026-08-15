@@ -62,10 +62,11 @@ h1{font-size:1.25rem;font-weight:800;letter-spacing:-.02em}
 .logo{width:26px;height:18px;flex-shrink:0}
 .head-count{font-size:0.8125rem;color:var(--gray600);font-variant-numeric:tabular-nums}
 .updbtn{
-  margin-left:auto;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;
-  color:var(--gray600);background:var(--gray100);
+  margin-left:auto;height:34px;padding:0 12px;border-radius:999px;display:flex;align-items:center;gap:4px;
+  color:var(--gray700);background:var(--gray100);text-decoration:none;
+  font-size:0.75rem;font-weight:700;
 }
-.updbtn .ic{width:17px;height:17px}
+.updbtn .ic{width:14px;height:14px}
 .updbtn:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px}
 .search{
   width:100%;height:40px;padding:0 14px;border:0;border-radius:10px;
@@ -236,6 +237,12 @@ body.mapon #list, body.mapon #footwrap{display:none}
   font-size:0.8125rem;color:var(--carrot950);line-height:1.6;
 }
 .note b{font-weight:700}
+.crit{margin-top:10px}
+.crit summary{cursor:pointer;font-weight:700;font-size:0.75rem;color:var(--carrot700)}
+.crit summary:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px}
+.crit-row{display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-size:0.75rem;line-height:1.55}
+.crit-tag{flex-shrink:0;font-weight:700;font-size:0.6875rem;padding:2px 8px;border-radius:999px;background:var(--gsoft);color:var(--gcol)}
+.crit-row.plain{color:var(--carrot950);opacity:.85}
 .foot{display:flex;align-items:center;justify-content:space-between;padding:8px 2px 24px;font-size:0.75rem;color:var(--gray600)}
 .foot-actions{display:flex;align-items:center;gap:10px}
 .foot-actions a{text-decoration:none}
@@ -277,7 +284,14 @@ body.mapon #list, body.mapon #footwrap{display:none}
 
 <div class="wrap" id="footwrap">
   <div class="note">
-    <b>참고용 분류예요.</b> 일반 통풍 식이 가이드(내장류·진한 사골 육수·등푸른생선·조개류 = 고퓨린)를 가게 업종에 적용한 것으로, 의료 자문이 아닙니다. 같은 가게라도 메뉴 선택에 따라 달라져요. 술은 등급에 넣지 않았지만, <b>종류와 무관하게 요산 배출을 방해</b>하니(특히 맥주) 적게 마실수록 좋아요.
+    <b>참고용 분류예요.</b> 일반 통풍 식이 가이드를 가게 업종·메뉴 이름에 적용한 것으로, 의료 자문이 아닙니다. 같은 가게라도 메뉴 선택에 따라 달라져요. 술은 등급에 넣지 않았지만, <b>종류와 무관하게 요산 배출을 방해</b>하니(특히 맥주) 적게 마실수록 좋아요.
+    <details class="crit">
+      <summary>분류 기준 자세히 보기</summary>
+      <div class="crit-row"><span class="crit-tag" style="--gcol:var(--red700);--gsoft:var(--red50)">주의</span>100g당 퓨린 200mg 이상, 또는 국물에 퓨린이 농축되는 조리 — 내장(곱창·간·천엽), 등푸른생선(고등어·정어리·참치), 조개·갑각류, 알류, 장어, 사골·돈코츠 육수, 맥주</div>
+      <div class="crit-row"><span class="crit-tag" style="--gcol:var(--yellow700);--gsoft:var(--yellow50)">보통</span>50~200mg — 소·돼지·닭 살코기(육회 포함), 대부분의 생선과 오징어·낙지류, 고기·멸치·가쓰오 육수 요리</div>
+      <div class="crit-row"><span class="crit-tag" style="--gcol:var(--green700);--gsoft:var(--green50)">안전</span>50mg 이하 — 곡물·메밀, 채소, 두부(식물성 퓨린은 위험도 낮음), 달걀, 유제품</div>
+      <div class="crit-row plain">가게 등급은 대표 업종 기준, 메뉴 등급은 메뉴 이름 기준이라 실제 조리와 다를 수 있어요. 가게 상세에서 등급을 눌러 직접 고칠 수 있습니다.</div>
+    </details>
   </div>
   <div class="foot">
     <span id="editInfo"></span>
@@ -297,10 +311,10 @@ const DATA = [{"id":"1906391798","name":"최고집 손칼국수","cat":"칼국�
 /*__DATA_LINE__*/
 const GRADES = ["하","중","상","미"];
 const GMETA = {
-  "하":{full:"하 — 상대적으로 안전", hint:"오늘 가기 좋은 곳", col:"var(--green700)", dot:"var(--green600)", soft:"var(--green50)"},
-  "중":{full:"중 — 적당히", hint:"양 조절하면 OK", col:"var(--yellow700)", dot:"var(--yellow600)", soft:"var(--yellow50)"},
-  "상":{full:"상 — 고퓨린", hint:"가끔만, 조심해서", col:"var(--red700)", dot:"var(--red600)", soft:"var(--red50)"},
-  "미":{full:"미분류", hint:"등급을 직접 지정해 주세요", col:"var(--gray700)", dot:"var(--gray500)", soft:"var(--gray100)"},
+  "하":{label:"안전", full:"안전 — 퓨린 낮음", hint:"오늘 가기 좋은 곳", col:"var(--green700)", dot:"var(--green600)", soft:"var(--green50)"},
+  "중":{label:"보통", full:"보통 — 적당히", hint:"양 조절하면 OK", col:"var(--yellow700)", dot:"var(--yellow600)", soft:"var(--yellow50)"},
+  "상":{label:"주의", full:"주의 — 고퓨린", hint:"가끔만, 조심해서", col:"var(--red700)", dot:"var(--red600)", soft:"var(--red50)"},
+  "미":{label:"미분류", full:"미분류", hint:"등급을 직접 지정해 주세요", col:"var(--gray700)", dot:"var(--gray500)", soft:"var(--gray100)"},
 };
 const MTAG = {
   "하":{label:"안전", col:"var(--green700)", soft:"var(--green50)"},
@@ -357,7 +371,7 @@ function hoodsTop(){
 /* ── 렌더: 탭 ── */
 function renderTabs(){
   const c = counts();
-  const defs = [["all","전체"],["하","하"],["중","중"],["상","상"],["미","미분류"]];
+  const defs = [["all","전체"],["하","안전"],["중","보통"],["상","주의"],["미","미분류"]];
   document.getElementById("tabs").innerHTML = defs.map(([g,label]) =>
     `<button class="tab" role="tab" data-g="${g}" data-on="${curTab===g?1:0}" aria-selected="${curTab===g}">${label} <b>${c[g]}</b></button>`
   ).join("");
@@ -409,7 +423,7 @@ function rowHTML(p){
       <div class="row-name"><span class="nm">${esc(p.name)}</span>${edited?'<span class="edited"></span>':""}${p.m&&p.m.length?`<span class="row-mcnt">메뉴 ${p.m.length}</span>`:""}</div>
       <div class="row-sub">${esc(p.cat)} · ${esc(p.reason)}${p.caution?' <span class="warn">⚠</span>':""}</div>
     </div>
-    <span class="gpill" style="--gcol:${m.col};--gsoft:${m.soft}">${g}</span>
+    <span class="gpill" style="--gcol:${m.col};--gsoft:${m.soft}">${m.label}</span>
   </article>`;
 }
 
@@ -475,7 +489,7 @@ function sheetHTML(p){
     <div class="s-grade">
       <div class="s-label">퓨린 등급 <span class="s-weak">직접 고칠 수 있어요</span></div>
       <div class="gedit">${GRADES.map(x =>
-        `<button class="gopt" data-act="set" data-g="${x}" data-cur="${x===g?1:0}">${x==="미"?"미분류":x}</button>`).join("")}
+        `<button class="gopt" data-act="set" data-g="${x}" data-cur="${x===g?1:0}">${GMETA[x].label}</button>`).join("")}
       </div>
     </div>
     <div class="s-menus">
@@ -780,7 +794,7 @@ if(window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListene
 document.getElementById("zin").innerHTML = ic("add");
 document.getElementById("zout").innerHTML = ic("subtraction");
 document.getElementById("locbtn").innerHTML = ic("gps");
-document.getElementById("updateLink").innerHTML = ic("retry");
+document.getElementById("updateLink").innerHTML = ic("retry") + "갱신";
 renderHoods();
 setView();
 render();
