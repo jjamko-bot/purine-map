@@ -914,6 +914,9 @@ function drawMap(){
     }
   }
 }
+function clearHood(){
+  if(curHood){ curHood = ""; renderHoods(); }
+}
 function renderHoods(){
   const el = document.getElementById("hoods");
   const chips = [["","전체"]].concat(hoodsTop().map(([h,n]) => [h, `${h} ${n}`]));
@@ -968,6 +971,7 @@ cv.addEventListener("pointermove", e => {
   if(ptrs.size===1 && panStart){
     const dx = e.clientX-panStart.x, dy = e.clientY-panStart.y;
     moved = Math.max(moved, Math.hypot(dx,dy));
+    if(moved > 6) clearHood();
     M.cx = panStart.cx - dx/M.k; M.cy = panStart.cy - dy/M.k;
     drawMap();
   } else if(ptrs.size===2 && pinchStart){
@@ -1100,6 +1104,7 @@ function initNaver(){
     zoom: cam?cam.z:12, minZoom: 6,
     logoControl: true, mapDataControl: false, scaleControl: false, zoomControl: false,
   });
+  naver.maps.Event.addListener(NMAP, "dragstart", clearHood);
   let nzPrev = null;
   naver.maps.Event.addListener(NMAP, "zoom_changed", () => {
     const z = NMAP.getZoom();
@@ -1186,6 +1191,7 @@ function initLeaflet(){
       try{ cam = JSON.parse(store.getItem("pm-lcam")); }catch(e){}
       if(cam && cam.z) LMAP.setView([cam.lat, cam.lng], cam.z);
       else lFit(mapPlaces());
+      LMAP.on("dragstart", clearHood);
       let lzPrev = null;
       LMAP.on("zoomend", () => {
         const z = LMAP.getZoom();
