@@ -4,6 +4,7 @@
 export default async function handler(req, res) {
   const q = String(req.query.q || "").slice(0, 60).trim();
   const c = String(req.query.c || "").slice(0, 44).trim(); // "위도,경도"
+  const n = Math.min(Math.max(parseInt(req.query.n, 10) || 10, 1), 30);
   res.setHeader("Access-Control-Allow-Origin", "*");
   if (!q) return res.status(400).json({ error: "q required" });
 
@@ -44,7 +45,7 @@ export default async function handler(req, res) {
           y: Number(v.y) || 0,
           review: Number(String(v.visitorReviewCount || "0").replace(/,/g, "")) || 0,
         });
-        if (places.length >= 10) break;
+        if (places.length >= n) break;
       }
     }
     res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=86400");

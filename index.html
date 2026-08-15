@@ -213,6 +213,14 @@ body.mapon #list, body.mapon #footwrap{display:none}
 }
 #lmap .plabel::before{display:none}
 .maptools{position:absolute;right:12px;bottom:calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;z-index:20}
+.scanbtn{
+  position:absolute;left:50%;bottom:calc(76px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;
+  height:38px;padding:0 16px;border:0;border-radius:999px;background:#ffffff;color:#26282b;
+  font-family:inherit;font-size:0.8125rem;font-weight:700;cursor:pointer;
+  box-shadow:0 2px 10px rgba(0,0,0,.22);
+}
+.scanbtn:disabled{opacity:.6}
+.scanbtn:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px}
 .mbtn{
   width:40px;height:40px;border-radius:10px;border:1px solid var(--gray300);background:var(--gray00);color:var(--gray900);
   font-family:inherit;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.1);
@@ -320,6 +328,7 @@ body.mapon #list, body.mapon #footwrap{display:none}
     <div id="lmap" hidden></div>
     <canvas id="mapcv"></canvas>
     <div class="hoods" id="hoods"></div>
+    <button class="scanbtn" id="scanbtn">이 주변 판정</button>
     <div class="maptools">
       <button class="mbtn" id="zin" aria-label="확대"></button>
       <button class="mbtn" id="zout" aria-label="축소"></button>
@@ -386,6 +395,7 @@ const gradeOf = p => overrides[p.id] || p.grade;
 /* ── 네이버 통합 검색 (외부 가게 즉석 판정) ── */
 const API_BASE = location.hostname === "purine-map.vercel.app" ? "" : "https://purine-map.vercel.app";
 let nvResults = null, nvLoading = false, nvTimer = null, nvSeq = 0;
+let nearby = [];  // "이 주변 판정" 결과 (지도 마커로만 표시)
 function gradePlaceCat(cat){
   if(RULES.PLACE_HIGH[cat]) return {grade:"상", reason:RULES.PLACE_HIGH[cat]};
   if(RULES.PLACE_MID[cat]) return {grade:"중", reason:RULES.PLACE_MID[cat]};
@@ -698,8 +708,8 @@ function extSheetHTML(p){
     </div>
     ${menuSec}`;
 }
-function openExtSheet(id){
-  const r = (nvResults||[]).find(x => x.id === id); if(!r) return;
+function openExtSheet(r){
+  if(!r) return;
   const gr = gradePlaceCat(r.cat);
   extPlace = {...r, grade:gr.grade, reason:gr.reason, caution:RULES.CAUTION[r.cat]||"", m:null};
   sheetId = null;
@@ -812,7 +822,7 @@ document.getElementById("list").addEventListener("click", e => {
   const sb = e.target.closest("[data-act='sortsheet']");
   if(sb){ openSheetHTML(sortSheetHTML()); return; }
   const nvRow = e.target.closest("[data-nvid]");
-  if(nvRow){ openExtSheet(nvRow.dataset.nvid); return; }
+  if(nvRow){ openExtSheet((nvResults||[]).find(x => x.id === nvRow.dataset.nvid)); return; }
   const row = e.target.closest("[data-id]");
   if(row) openSheet(row.dataset.id);
 });
@@ -1159,6 +1169,18 @@ function nRefresh(){
     naver.maps.Event.addListener(mk, "click", () => openSheet(p.id));
     nMarkers.push(mk);
   }
+  for(const p of nearby){
+    const g = gradePlaceCat(p.cat).grade;
+    const mk = new naver.maps.Marker({
+      position: new naver.maps.LatLng(p.y, p.x), map: NMAP, title: p.name,
+      icon: {
+        content: `<div class="nvmk" style="width:14px;height:14px;border-radius:50%;background:#fff;border:3.5px solid ${GC[g]};box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>`,
+        anchor: new naver.maps.Point(7, 7),
+      },
+    });
+    naver.maps.Event.addListener(mk, "click", () => openExtSheet(p));
+    nMarkers.push(mk);
+  }
 }
 
 let LMAP = null, lLayer = null, lUser = null, leafletTried = false;
@@ -1237,7 +1259,33 @@ function lRefresh(){
     mk.on("click", () => openSheet(p.id));
     mk.addTo(lLayer);
   }
+  for(const p of nearby){
+    const g = gradePlaceCat(p.cat).grade;
+    const mk = L.circleMarker([p.y, p.x], {radius:6.5, color:GC[g], weight:3, fillColor:"#ffffff", fillOpacity:1});
+    mk.bindTooltip(p.name, {direction:"top", offset:[0,-8], opacity:0.95});
+    mk.on("click", () => openExtSheet(p));
+    mk.addTo(lLayer);
+  }
 }
+
+/* ── 이 주변 판정 ── */
+document.getElementById("scanbtn").addEventListener("click", () => {
+  const btn = document.getElementById("scanbtn");
+  let lat = null, lng = null;
+  if(NMAP){ const ct = NMAP.getCenter(); lat = ct.lat(); lng = ct.lng(); }
+  else if(LMAP){ const ct = LMAP.getCenter(); lat = ct.lat; lng = ct.lng; }
+  else return toast("이 환경에서는 주변 판정을 쓸 수 없어요");
+  btn.disabled = true; btn.textContent = "판정 중…";
+  fetch(`${API_BASE}/api/search?q=${encodeURIComponent("음식점")}&c=${lat.toFixed(5)},${lng.toFixed(5)}&n=30`)
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(j => {
+      nearby = (j.places||[]).filter(p => !DATA.some(d => d.id === p.id));
+      drawMap();
+      toast(`주변 ${nearby.length}곳 판정 완료 — 링 모양 마커를 눌러보세요`);
+    })
+    .catch(() => toast("주변 판정에 실패했어요 — 잠시 후 다시"))
+    .finally(() => { btn.disabled = false; btn.textContent = "이 주변 판정"; });
+});
 
 /* ── 뷰 전환 ── */
 function setView(){
