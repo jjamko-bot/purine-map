@@ -3,11 +3,17 @@
 // GET /api/search?q=검색어
 export default async function handler(req, res) {
   const q = String(req.query.q || "").slice(0, 60).trim();
+  const c = String(req.query.c || "").slice(0, 44).trim(); // "위도,경도"
   res.setHeader("Access-Control-Allow-Origin", "*");
   if (!q) return res.status(400).json({ error: "q required" });
 
+  // 상호명 검색은 중심 좌표가 있어야 결과가 나옴 — 기본값은 서울 중심
+  let lat = 37.5666, lng = 126.9784;
+  const m = c.match(/^(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/);
+  if (m) { lat = Number(m[1]); lng = Number(m[2]); }
+
   try {
-    const r = await fetch(`https://m.place.naver.com/restaurant/list?query=${encodeURIComponent(q)}`, {
+    const r = await fetch(`https://m.place.naver.com/restaurant/list?query=${encodeURIComponent(q)}&x=${lng}&y=${lat}`, {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
