@@ -114,6 +114,33 @@ h1{font-size:1.25rem;font-weight:800;letter-spacing:-.02em}
 .reco-name{font-size:0.8125rem;font-weight:700;margin-top:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .reco-sub{font-size:0.75rem;color:var(--gray600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
+/* ── 정렬 ── */
+.sort-row{display:flex;align-items:center;justify-content:space-between;margin:16px 0 2px}
+.sort-n{font-size:0.8125rem;color:var(--gray600);font-variant-numeric:tabular-nums}
+.sort-warn{color:var(--carrot700);font-weight:600}
+.sort-btn{
+  border:0;background:none;color:var(--gray700);border-radius:6px;
+  font-family:inherit;font-size:0.8125rem;font-weight:600;padding:6px 2px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:2px;
+}
+.sort-btn .arr{width:13px;height:13px;color:var(--gray500)}
+.sort-btn:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px}
+.opt-row{
+  width:100%;display:flex;align-items:center;gap:12px;padding:14px 2px;border:0;background:none;
+  font-family:inherit;text-align:left;cursor:pointer;color:inherit;border-bottom:1px solid var(--gray100);
+}
+.opt-row:last-child{border-bottom:0}
+.opt-row:focus-visible{outline:2px solid var(--carrot500);outline-offset:-2px;border-radius:8px}
+.opt-row .radio{
+  width:20px;height:20px;border-radius:50%;border:2px solid var(--gray300);flex-shrink:0;
+}
+.opt-row[data-cur="1"] .radio{border:6px solid var(--carrot500)}
+.opt-body{display:flex;flex-direction:column;gap:1px}
+.opt-tit{font-size:0.9375rem;font-weight:600}
+.opt-row[data-cur="1"] .opt-tit{font-weight:700}
+.opt-desc{font-size:0.75rem;color:var(--gray500)}
+.row-sub .dist{font-weight:700;color:var(--gray700)}
+
 /* ── 섹션 & 리스트 행 ── */
 .sec-head{display:flex;align-items:center;gap:7px;margin:22px 0 4px}
 .sec-head .dot{width:8px;height:8px;border-radius:50%;background:var(--gcol);flex-shrink:0}
@@ -342,8 +369,10 @@ try{ localStorage.setItem("_t","1"); localStorage.removeItem("_t"); store = loca
 catch(e){ const m={}; store={getItem:k=>m[k]??null,setItem:(k,v)=>m[k]=v,removeItem:k=>delete m[k]}; }
 let overrides = {};
 try{ overrides = JSON.parse(store.getItem("purine-overrides")||"{}"); }catch(e){}
-let curTab = "all", query = "", sheetId = null, recoSeed = 1, curHood = "";
+let curTab = "all", query = "", sheetId = null, sheetOpen = false, recoSeed = 1, curHood = "";
 let curView = store.getItem("pm-view")==="map" ? "map" : "list";
+let curSort = ["dist","safe","reco"].includes(store.getItem("pm-sort")) ? store.getItem("pm-sort") : "dist";
+const SORTS = {dist:"거리순", safe:"안전도순", reco:"추천순"};
 
 const gradeOf = p => overrides[p.id] || p.grade;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -356,6 +385,24 @@ function matches(p){
   if(!query) return true;
   const q = query.toLowerCase();
   return (p.name+" "+p.cat+" "+p.addr).toLowerCase().includes(q);
+}
+function distOf(p){
+  if(!userLoc || !p.x) return null;
+  const R = 6371000, toR = Math.PI/180;
+  const dLat = (p.y-userLoc.y)*toR, dLng = (p.x-userLoc.x)*toR;
+  const h = Math.sin(dLat/2)**2 + Math.cos(userLoc.y*toR)*Math.cos(p.y*toR)*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+const fmtDist = d => d < 950 ? Math.round(d/10)*10 + "m" : (d/1000).toFixed(1) + "km";
+function recoScore(p){
+  // 추천순: 안전도(0~100) + 근접도(0~40, 2km 지수감쇠) + 메뉴 정보력(0~20) - 주의 감점(10)
+  let s = {"하":100,"중":55,"미":40,"상":10}[gradeOf(p)];
+  const d = distOf(p);
+  if(d !== null) s += 40 * Math.exp(-d/2000);
+  const ms = p.m || [];
+  if(ms.length) s += Math.min(ms.length,20)/20*10 + (ms.filter(m=>m.img).length/ms.length)*10;
+  if(p.caution) s -= 10;
+  return s;
 }
 function counts(){
   const pool = DATA.filter(matches);
@@ -435,7 +482,7 @@ function rowHTML(p){
         :`<div class="avatar ph" style="--gsoft:${m.soft};--gcol:${m.col}">${esc((p.name||"?").slice(0,1))}</div>`}
     <div class="row-body">
       <div class="row-name"><span class="nm">${esc(p.name)}</span>${edited?'<span class="edited"></span>':""}${p.m&&p.m.length?`<span class="row-mcnt">메뉴 ${p.m.length}</span>`:""}</div>
-      <div class="row-sub">${esc(p.cat)} · ${esc(p.reason)}${p.caution?' <span class="warn">⚠</span>':""}</div>
+      <div class="row-sub">${(()=>{const d=distOf(p);return d!==null?`<b class="dist">${fmtDist(d)}</b> · `:"";})()}${esc(p.cat)} · ${esc(p.reason)}${p.caution?' <span class="warn">⚠</span>':""}</div>
     </div>
     <span class="gpill" style="--gcol:${m.col};--gsoft:${m.soft}">${m.label}</span>
   </article>`;
@@ -447,9 +494,14 @@ function render(){
   const visible = DATA.filter(p => matches(p) && (curTab==="all" || gradeOf(p)===curTab));
   let html = "";
   if(curTab==="all" && !query) html += recoHTML();
+  const locNeeded = curSort==="dist" && !userLoc;
+  html += `<div class="sort-row">
+    <span class="sort-n">${visible.length}곳${locNeeded?' · <span class="sort-warn">위치를 허용하면 거리순이 정확해져요</span>':""}</span>
+    <button class="sort-btn" data-act="sortsheet">${SORTS[curSort]} ${ic("expand_more","arr")}</button>
+  </div>`;
   if(!visible.length){
     html += `<div class="empty">조건에 맞는 곳이 없어요</div>`;
-  } else if(curTab==="all"){
+  } else if(curSort==="safe" && curTab==="all"){
     html += GRADES.map(g => {
       const items = visible.filter(p => gradeOf(p)===g);
       if(!items.length) return "";
@@ -460,7 +512,16 @@ function render(){
       </section>`;
     }).join("");
   } else {
-    html += `<section style="margin-top:6px"><div class="rows">${visible.map(rowHTML).join("")}</div></section>`;
+    const sorted = visible.slice();
+    if(curSort==="dist" && userLoc){
+      sorted.sort((x,y) => (distOf(x)??1e12) - (distOf(y)??1e12));
+    } else if(curSort==="reco" || (curSort==="dist" && !userLoc)){
+      sorted.sort((x,y) => recoScore(y) - recoScore(x));
+    } else {
+      const ord = {"하":0,"중":1,"상":2,"미":3};
+      sorted.sort((x,y) => ord[gradeOf(x)] - ord[gradeOf(y)]);
+    }
+    html += `<section><div class="rows">${sorted.map(rowHTML).join("")}</div></section>`;
   }
   list.innerHTML = html;
   const nEdit = Object.keys(overrides).filter(id => {
@@ -507,20 +568,38 @@ function sheetHTML(p){
       :`<div class="mnote">네이버에 등록된 메뉴 정보가 없는 곳이에요</div>`}
     </div>`;
 }
-function openSheet(id){
-  const p = DATA.find(x=>x.id===id); if(!p) return;
-  sheetId = id;
+function openSheetHTML(html){
+  sheetOpen = true;
   const sh = document.getElementById("sheet"), dim = document.getElementById("dim");
-  sh.innerHTML = sheetHTML(p);
+  sh.innerHTML = html;
   sh.hidden = false; dim.hidden = false;
   sh.scrollTop = 0;
   requestAnimationFrame(() => { sh.classList.add("on"); dim.classList.add("on"); });
   document.body.classList.add("locked");
+}
+function sortSheetHTML(){
+  const descs = {
+    dist: "가까운 곳부터 · 위치 허용 필요",
+    safe: "안전한 곳부터 · 등급 섹션으로 묶어서",
+    reco: "안전도·거리·메뉴 정보를 종합한 점수순",
+  };
+  return `<div class="sheet-grab"></div>
+    <div class="s-label" style="margin:4px 0 6px">정렬</div>
+    ${Object.keys(SORTS).map(k => `
+      <button class="opt-row" data-act="sort" data-v="${k}" data-cur="${curSort===k?1:0}">
+        <span class="radio"></span>
+        <span class="opt-body"><span class="opt-tit">${SORTS[k]}</span><span class="opt-desc">${descs[k]}</span></span>
+      </button>`).join("")}`;
+}
+function openSheet(id){
+  const p = DATA.find(x=>x.id===id); if(!p) return;
+  sheetId = id;
+  openSheetHTML(sheetHTML(p));
   if(curView==="map") drawMap();
 }
 function closeSheet(){
-  if(sheetId===null) return;
-  sheetId = null;
+  if(!sheetOpen) return;
+  sheetOpen = false; sheetId = null;
   const sh = document.getElementById("sheet"), dim = document.getElementById("dim");
   sh.classList.remove("on"); dim.classList.remove("on");
   document.body.classList.remove("locked");
@@ -557,9 +636,16 @@ document.addEventListener("keydown", e => { if(e.key==="Escape") closeSheet(); }
   sh.addEventListener("pointercancel", end);
 })();
 document.getElementById("sheet").addEventListener("click", e => {
-  const b = e.target.closest("[data-act]"); if(!b || sheetId===null) return;
+  const b = e.target.closest("[data-act]"); if(!b) return;
+  if(b.dataset.act==="close") return closeSheet();
+  if(b.dataset.act==="sort"){
+    curSort = b.dataset.v; store.setItem("pm-sort", curSort);
+    closeSheet(); render();
+    if(curSort==="dist" && !userLoc){ autoLocated = false; autoLocate(); }
+    return;
+  }
+  if(sheetId===null) return;
   const p = DATA.find(x=>x.id===sheetId);
-  if(b.dataset.act==="close") closeSheet();
   if(b.dataset.act==="onmap"){
     closeSheet();
     curView = "map"; setView();
@@ -580,6 +666,8 @@ document.getElementById("q").addEventListener("input", e => {
 document.getElementById("list").addEventListener("click", e => {
   const sh = e.target.closest("[data-act='shuffle']");
   if(sh){ recoSeed++; render(); return; }
+  const sb = e.target.closest("[data-act='sortsheet']");
+  if(sb){ openSheetHTML(sortSheetHTML()); return; }
   const row = e.target.closest("[data-id]");
   if(row) openSheet(row.dataset.id);
 });
@@ -836,8 +924,9 @@ function autoLocate(){
   autoLocated = true;
   navigator.geolocation.getCurrentPosition(pos => {
     userLoc = {x:pos.coords.longitude, y:pos.coords.latitude};
-    applyUserLoc();
-  }, ()=>{}, {timeout:6000, maximumAge:300000});
+    if(curView==="map") applyUserLoc();
+    else render();
+  }, ()=>{ if(curView==="list") render(); }, {timeout:6000, maximumAge:300000});
 }
 function tryNaver(){
   if(naverTried || !NAVER_CLIENT_ID) { if(!NAVER_CLIENT_ID) tryLeaflet(); return; }
@@ -1030,4 +1119,5 @@ document.getElementById("updateLink").innerHTML = ic("retry") + "갱신";
 renderHoods();
 setView();
 render();
+autoLocate();  // 거리순 기본 정렬용 — 거부 시 추천순 점수로 폴백
 </script>
