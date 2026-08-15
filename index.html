@@ -631,6 +631,7 @@ function fitMap(pts){
   M.k = Math.max(40, Math.min(M.k, 60000));
 }
 function drawMap(){
+  if(NMAP){ nRefresh(); return; }
   if(LMAP){ lRefresh(); return; }
   if(!cv.width) sizeCanvas();
   const r = cv.getBoundingClientRect();
@@ -697,6 +698,7 @@ document.getElementById("hoods").addEventListener("click", e => {
   curHood = b.dataset.h;
   renderHoods();
   const pts = curHood ? DATA.filter(p => p.x && p.addr.includes(curHood)) : mapPlaces();
+  if(NMAP){ nvFit(pts); return; }
   if(LMAP){ lFit(pts); return; }
   fitMap(pts); saveCam(); drawMap();
 });
@@ -709,12 +711,14 @@ function mapJump(){
   if(query.length >= 2){
     const d = GEO.names.find(n => n[2].includes(query));
     if(d){
+      if(NMAP){ NMAP.setCenter(new naver.maps.LatLng(d[1], d[0])); if(NMAP.getZoom()<13) NMAP.setZoom(13, true); return; }
       if(LMAP){ LMAP.setView([d[1], d[0]], Math.max(LMAP.getZoom(), 13)); return; }
       M.cx = d[0]; M.cy = mercY(d[1]); M.k = Math.max(M.k, 6000); saveCam(); drawMap(); return;
     }
   }
   const pts = mapPlaces();
   if(query && pts.length){
+    if(NMAP){ nvFit(pts); return; }
     if(LMAP){ lFit(pts); return; }
     fitMap(pts); saveCam(); drawMap();
   }
@@ -776,10 +780,12 @@ cv.addEventListener("wheel", e => {
   saveCam(); drawMap();
 }, {passive:false});
 document.getElementById("zin").addEventListener("click", ()=>{
+  if(NMAP) return NMAP.setZoom(NMAP.getZoom()+1, true);
   if(LMAP) return LMAP.zoomIn();
   M.k=Math.min(M.k*1.5,60000); saveCam(); drawMap();
 });
 document.getElementById("zout").addEventListener("click", ()=>{
+  if(NMAP) return NMAP.setZoom(NMAP.getZoom()-1, true);
   if(LMAP) return LMAP.zoomOut();
   M.k=Math.max(M.k/1.5,40); saveCam(); drawMap();
 });
@@ -787,6 +793,14 @@ document.getElementById("locbtn").addEventListener("click", ()=>{
   if(!navigator.geolocation) return toast("이 환경에서는 위치 기능을 쓸 수 없어요");
   navigator.geolocation.getCurrentPosition(pos => {
     userLoc = {x:pos.coords.longitude, y:pos.coords.latitude};
+    if(NMAP){
+      if(nUser) nUser.setMap(null);
+      nUser = new naver.maps.Marker({position:new naver.maps.LatLng(userLoc.y,userLoc.x), map:NMAP,
+        icon:{content:'<div style="width:16px;height:16px;border-radius:50%;background:#0088cc;border:2px solid #fff"></div>', anchor:new naver.maps.Point(8,8)}});
+      NMAP.setCenter(new naver.maps.LatLng(userLoc.y, userLoc.x));
+      if(NMAP.getZoom() < 15) NMAP.setZoom(15, true);
+      return;
+    }
     if(LMAP){
       if(lUser) lUser.remove();
       lUser = L.circleMarker([userLoc.y, userLoc.x], {radius:7, color:"#fff", weight:2, fillColor:"#0088cc", fillOpacity:1}).addTo(LMAP);
@@ -798,7 +812,69 @@ document.getElementById("locbtn").addEventListener("click", ()=>{
   }, ()=>toast("위치 권한이 막혀 있어요 — 동네 칩이나 검색으로 이동해 보세요"), {timeout:5000});
 });
 
-/* ── 실지도 (Leaflet + OSM) — 외부 요청이 가능한 환경(공개 배포)에서만 활성화, 차단 시 캔버스 폴백 ── */
+/* ── 실지도 3단 폴백: 네이버 지도 SDK → Leaflet+OSM → 내장 캔버스 ── */
+// 네이버 클라우드 플랫폼 Maps의 Client ID(ncpKeyId). 비워두면 네이버 지도는 건너뛴다.
+// 발급 후 여기에 넣고 빌드하면 활성화. 웹 키는 도메인 제한이라 공개되어도 안전.
+const NAVER_CLIENT_ID = "";
+let NMAP = null, nMarkers = [], nUser = null, naverTried = false;
+function tryNaver(){
+  if(naverTried || !NAVER_CLIENT_ID) { if(!NAVER_CLIENT_ID) tryLeaflet(); return; }
+  naverTried = true;
+  const s = document.createElement("script");
+  s.src = "https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=" + encodeURIComponent(NAVER_CLIENT_ID);
+  s.onload = () => { try{ initNaver(); }catch(e){ tryLeaflet(); } };
+  s.onerror = () => tryLeaflet();
+  document.head.appendChild(s);
+}
+function initNaver(){
+  if(!window.naver || !naver.maps) return tryLeaflet();
+  const el = document.getElementById("lmap");
+  el.hidden = false; el.classList.add("on");
+  let cam = null;
+  try{ cam = JSON.parse(store.getItem("pm-ncam")); }catch(e){}
+  NMAP = new naver.maps.Map(el, {
+    center: new naver.maps.LatLng(cam?cam.lat:37.53, cam?cam.lng:127.02),
+    zoom: cam?cam.z:12, minZoom: 6,
+    logoControl: true, mapDataControl: false, scaleControl: false, zoomControl: false,
+  });
+  naver.maps.Event.addListener(NMAP, "idle", () => {
+    const c = NMAP.getCenter();
+    try{ store.setItem("pm-ncam", JSON.stringify({lat:c.lat(), lng:c.lng(), z:NMAP.getZoom()})); }catch(e){}
+  });
+  const boot = (tries) => {
+    naver.maps.Event.trigger(NMAP, "resize");
+    if(el.clientWidth < 50 && tries < 25) return setTimeout(()=>boot(tries+1), 200);
+    if(!cam) nvFit(mapPlaces());
+    nRefresh();
+  };
+  setTimeout(()=>boot(0), 120);
+}
+function nvFit(pts){
+  if(!NMAP) return;
+  if(!pts.length) pts = DATA.filter(p=>p.x);
+  const b = new naver.maps.LatLngBounds();
+  pts.forEach(p => b.extend(new naver.maps.LatLng(p.y, p.x)));
+  NMAP.fitBounds(b, {top:36,right:36,bottom:36,left:36});
+}
+function nRefresh(){
+  if(!NMAP) return;
+  const GC = {"하":cssv("--green600"),"중":cssv("--yellow600"),"상":cssv("--red600"),"미":cssv("--gray500")};
+  nMarkers.forEach(m => m.setMap(null)); nMarkers = [];
+  for(const p of mapPlaces()){
+    const g = gradeOf(p);
+    const size = sheetId===p.id ? 18 : 14;
+    const mk = new naver.maps.Marker({
+      position: new naver.maps.LatLng(p.y, p.x), map: NMAP, title: p.name,
+      icon: {
+        content: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${GC[g]};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)"></div>`,
+        anchor: new naver.maps.Point(size/2, size/2),
+      },
+    });
+    naver.maps.Event.addListener(mk, "click", () => openSheet(p.id));
+    nMarkers.push(mk);
+  }
+}
+
 let LMAP = null, lLayer = null, lUser = null, leafletTried = false;
 function tryLeaflet(){
   if(leafletTried || window.L) return;
@@ -866,7 +942,8 @@ function setView(){
   document.body.classList.toggle("mapon", curView==="map");
   store.setItem("pm-view", curView);
   if(curView==="map"){
-    tryLeaflet();
+    tryNaver();
+    if(NMAP){ setTimeout(()=>{ naver.maps.Event.trigger(NMAP, "resize"); nRefresh(); }, 60); return; }
     if(LMAP){ setTimeout(()=>{ LMAP.invalidateSize(); lRefresh(); }, 60); return; }
     sizeCanvas();
     if(!M.inited){ fitMap(mapPlaces()); M.inited = true; saveCam(); }
