@@ -201,7 +201,7 @@ body.mapon > header{
 body.mapon .head-top{display:none}
 body.mapon #tabs{display:none}
 body.mapon .qwrap{pointer-events:auto;margin-top:12px}
-body.mapon .search{background:var(--gray00);color:var(--gray900);box-shadow:0 2px 12px rgba(0,0,0,.28)}
+body.mapon .search{background:var(--gray00);color:var(--gray900);box-shadow:0 6px 20px rgba(0,0,0,.4), 0 1px 4px rgba(0,0,0,.24)}
 body.mapon #mapwrap{display:block;flex:1;min-height:0;max-width:none;width:100%;padding:0;margin:0}
 body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 .hoods{
@@ -214,7 +214,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 .hood{
   pointer-events:auto;flex-shrink:0;height:34px;padding:0 13px;border:0;border-radius:999px;
   background:var(--gray00);color:var(--gray900);font-family:inherit;font-size:0.8125rem;font-weight:600;cursor:pointer;
-  box-shadow:0 2px 8px rgba(0,0,0,.24);
+  box-shadow:0 4px 14px rgba(0,0,0,.36), 0 1px 3px rgba(0,0,0,.22);
   display:flex;align-items:center;gap:5px;
 }
 .hood .ic{width:15px;height:15px}
@@ -386,6 +386,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 .fav-x{flex-shrink:0;width:36px;height:36px;border:0;border-radius:50%;background:none;color:var(--carrot500);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .fav-x .ic{width:18px;height:18px}
 .fav-row{border-bottom:1px solid var(--gray100)}
+.fav-row .row{border-bottom:0} /* 행 자체 디바이더와 겹쳐 두 줄로 보이던 문제 */
 .fav-row:last-child{border-bottom:0}
 .fav-orow{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--gray100);font-size:0.875rem}
 .fav-oname{flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
