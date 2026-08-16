@@ -54,6 +54,7 @@ body{
 .bnav-item[data-on="1"]{color:var(--gray900);font-weight:700}
 .bnav-item .ic{width:22px;height:22px}
 .bnav-item:focus-visible{outline:2px solid var(--carrot500);outline-offset:-2px}
+body.favson .logo, body.favson .head-count{display:none}
 body.locked{overflow:hidden}
 .wrap{max-width:520px;margin:0 auto;padding:0 16px}
 
@@ -1414,11 +1415,7 @@ function renderFavs(){
   const rows = added.concat(folder).map(p => extIds.has(p.id)
     ? `<div class="fav-row">${rowHTML(p)}<button class="fav-x" data-del="${p.id}" aria-label="${esc(p.name)} 즐겨찾기에서 빼기">${ic("close")}</button></div>`
     : rowHTML(p)).join("");
-  document.getElementById("favs").innerHTML = `
-    <div class="fav-note">네이버 지도 <b>🦊 폴더 ${folder.length}곳</b> + 앱에서 추가한 <b>${added.length}곳</b>.
-    새 가게는 검색·지도의 <b>북마크</b>로 추가해요. 폴더 가게는 네이버 지도에서 관리한 뒤
-    <a href="https://claude.ai/code/routines/trig_011mscPQVkciiHTsTDbvAUxa" target="_blank" rel="noopener">데이터 갱신 ↗</a>하면 반영돼요.</div>
-    <div class="fav-list">${rows}</div>`;
+  document.getElementById("favs").innerHTML = `<div class="fav-list">${rows}</div>`;
 }
 function removeExtra(id){
   EXTRA = EXTRA.filter(p => p.id !== id);
@@ -1449,6 +1446,8 @@ function setView(){
     b.innerHTML = ic(on ? d[1] : d[0]) + `<span>${d[2]}</span>`;
   });
   document.body.classList.toggle("mapon", curView==="map");
+  document.body.classList.toggle("favson", curView==="favs");
+  document.querySelector("body > header h1").textContent = curView==="favs" ? "즐겨찾기" : "퓨린 신호등";
   document.getElementById("list").hidden = curView!=="home";
   document.getElementById("footwrap").hidden = curView!=="home";
   document.getElementById("favs").hidden = curView!=="favs";
