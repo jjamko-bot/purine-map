@@ -231,7 +231,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 .mbtn .ic{width:18px;height:18px}
 .mbtn:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px}
 .maptoast{
-  position:fixed;left:50%;transform:translateX(-50%);bottom:calc(140px + env(safe-area-inset-bottom));z-index:35;background:var(--gray900);color:var(--gray00);
+  position:fixed;left:50%;transform:translateX(-50%);bottom:calc(140px + env(safe-area-inset-bottom));z-index:60;background:var(--gray900);color:var(--gray00);
   font-size:0.8125rem;font-weight:600;padding:9px 16px;border-radius:999px;display:none;white-space:nowrap;max-width:92%;
 }
 
@@ -273,6 +273,13 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
   display:flex;align-items:center;justify-content:center;gap:5px;
 }
 .s-btn .ic{width:15px;height:15px}
+.s-icon{
+  flex-shrink:0;width:48px;height:44px;border:0;border-radius:12px;background:var(--gray100);color:var(--gray900);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.s-icon .ic{width:20px;height:20px}
+.s-icon[data-fav="1"]{color:var(--carrot500)}
+.s-icon:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px}
 .s-menus > .s-btn{width:100%}
 .s-btn.pri{background:var(--carrot500);color:#fff}
 .s-btn:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px}
@@ -361,7 +368,6 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
       <button class="mbtn" id="zout" aria-label="축소"></button>
       <button class="mbtn" id="locbtn" aria-label="내 위치"></button>
     </div>
-    <div class="maptoast" id="maptoast"></div>
   </div>
 </div>
 
@@ -385,6 +391,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
   <button class="bnav-item" data-view="map" role="tab"></button>
   <button class="bnav-item" data-view="favs" role="tab"></button>
 </nav>
+<div class="maptoast" id="maptoast"></div>
 <div class="dim" id="dim" hidden></div>
 <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="가게 상세" hidden>
   <div class="sheet-grip" id="sheetGrip"><div class="sheet-grab"></div></div>
@@ -685,6 +692,7 @@ function sheetHTML(p){
     </header>
     ${p.caution?`<div class="s-caution">⚠ ${esc(p.caution)}</div>`:""}
     <div class="s-actions">
+      <button class="s-icon" data-act="fav" data-fav="1" aria-label="즐겨찾기에서 관리">${ic("bookmark_f")}</button>
       ${p.x?`<button class="s-btn" data-act="onmap">${ic("gps")} 지도에서 보기</button>`:""}
       <a class="s-btn pri" href="https://map.naver.com/p/entry/place/${p.id}" target="_blank" rel="noopener">네이버 지도 ↗</a>
     </div>
@@ -720,7 +728,7 @@ let extPlace = null;  // 현재 열린 외부(네이버 검색) 가게
 function extSheetHTML(p){
   const m = GMETA[p.grade];
   const menuSec = p.m === null
-    ? `<div class="s-menus"><button class="s-btn" data-act="extmenus">${ic("restaurant")} 이 가게 메뉴 분석하기</button></div>`
+    ? ""
     : (p.m.length
       ? `<div class="s-menus"><div class="s-label">메뉴 <b>${p.m.length}</b> <span class="s-weak">안전한 순</span></div>` +
         p.m.slice().sort((x,y) => MORDER[x.g]-MORDER[y.g]).map(mn => {
@@ -745,8 +753,9 @@ function extSheetHTML(p){
     </header>
     ${p.caution?`<div class="s-caution">⚠ ${esc(p.caution)}</div>`:""}
     <div class="s-actions">
-      <button class="s-btn" data-act="addmine">${ic("add")} 내 목록에 추가</button>
-      <a class="s-btn pri" href="https://map.naver.com/p/entry/place/${p.id}" target="_blank" rel="noopener">네이버 지도 ↗</a>
+      <button class="s-icon" data-act="addmine" aria-label="즐겨찾기에 추가">${ic("bookmark")}</button>
+      <a class="s-btn${p.m===null?"":" pri"}" href="https://map.naver.com/p/entry/place/${p.id}" target="_blank" rel="noopener">네이버 지도 ↗</a>
+      ${p.m===null?`<button class="s-btn pri" data-act="extmenus">${ic("restaurant")} 메뉴 분석하기</button>`:""}
     </div>
     ${menuSec}`;
 }
@@ -833,12 +842,18 @@ document.getElementById("sheet").addEventListener("click", e => {
       try{ store.setItem("pm-extra", JSON.stringify(EXTRA)); }catch(e){}
       HOODS = null; renderHoods();
       closeSheet(); render();
+      toast(`${saved.name} — 즐겨찾기에 추가했어요`);
       return;
     }
     return;
   }
   if(sheetId===null) return;
   const p = DATA.find(x=>x.id===sheetId);
+  if(b.dataset.act==="fav"){
+    if(EXTRA.some(x => x.id === p.id)){ const nm = p.name; closeSheet(); removeExtra(p.id); toast(`${nm}을(를) 목록에서 뺐어요`); }
+    else toast("네이버 지도 🦊 폴더에서 관리되는 즐겨찾기예요");
+    return;
+  }
   if(b.dataset.act==="onmap"){
     closeSheet();
     curView = "map"; setView();
@@ -1236,12 +1251,14 @@ function nRefresh(){
     naver.maps.Event.addListener(mk, "click", () => openSheet(p.id));
     nMarkers.push(mk);
   }
+  const nSearchMode = query.length >= 2 && nvResults;
   for(const p of ringPlaces()){
     const g = gradePlaceCat(p.cat).grade;
+    const rlbl = nSearchMode ? `<div style="position:absolute;top:16px;left:50%;transform:translateX(-50%);white-space:nowrap;font:600 11px Pretendard,'Pretendard Variable',sans-serif;color:#26282b;text-shadow:0 1px 2px #fff,0 -1px 2px #fff,1px 0 2px #fff,-1px 0 2px #fff">${esc(p.name)}</div>` : "";
     const mk = new naver.maps.Marker({
       position: new naver.maps.LatLng(p.y, p.x), map: NMAP, title: p.name,
       icon: {
-        content: `<div class="nvmk" style="width:14px;height:14px;border-radius:50%;background:#fff;border:3.5px solid ${GC[g]};box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>`,
+        content: `<div class="nvmk" style="position:relative;width:14px;height:14px"><div style="width:14px;height:14px;border-radius:50%;background:#fff;border:3.5px solid ${GC[g]};box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>${rlbl}</div>`,
         anchor: new naver.maps.Point(7, 7),
       },
     });
@@ -1326,10 +1343,12 @@ function lRefresh(){
     mk.on("click", () => openSheet(p.id));
     mk.addTo(lLayer);
   }
+  const searchMode = query.length >= 2 && nvResults;
   for(const p of ringPlaces()){
     const g = gradePlaceCat(p.cat).grade;
     const mk = L.circleMarker([p.y, p.x], {radius:6.5, color:GC[g], weight:3, fillColor:"#ffffff", fillOpacity:1});
-    mk.bindTooltip(p.name, {direction:"top", offset:[0,-8], opacity:0.95});
+    if(searchMode) mk.bindTooltip(p.name, {permanent:true, direction:"bottom", offset:[0,8], className:"plabel"});
+    else mk.bindTooltip(p.name, {direction:"top", offset:[0,-8], opacity:0.95});
     mk.on("click", () => openExtSheet(p));
     mk.addTo(lLayer);
   }
@@ -1379,7 +1398,7 @@ function renderFavs(){
   const ovIds = Object.keys(overrides).filter(id => { const p = DATA.find(d=>d.id===id); return p && overrides[id] !== p.grade; });
   const extRows = EXTRA.length
     ? EXTRA.map(p => `<div class="fav-row">${rowHTML(p)}<button class="fav-x" data-del="${p.id}" aria-label="${esc(p.name)} 목록에서 빼기">${ic("close")}</button></div>`).join("")
-    : `<div class="fav-note">검색이나 지도에서 <b>내 목록에 추가</b>한 가게가 여기에 모여요. 이 기기에만 저장돼요.</div>`;
+    : `<div class="fav-note">가게 시트에서 <b>북마크</b>를 누르면 여기에 모여요. 이 기기에만 저장돼요.</div>`;
   const ovRows = ovIds.length
     ? ovIds.map(id => {
         const p = DATA.find(d=>d.id===id);
