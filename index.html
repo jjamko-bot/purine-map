@@ -35,7 +35,8 @@
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
-html{-webkit-text-size-adjust:100%}
+html{-webkit-text-size-adjust:100%;overflow-x:hidden}
+body{overflow-x:hidden}
 body{
   background:var(--gray00); color:var(--gray900);
   font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
@@ -338,7 +339,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 .mnote{font-size:0.6875rem;color:var(--gray500);padding:8px 0 2px}
 
 /* ── 검색 페이지 ── */
-.spage{position:fixed;inset:0;z-index:34;background:var(--gray00);display:flex;flex-direction:column}
+.spage{position:fixed;inset:0;z-index:34;background:var(--gray00);display:flex;flex-direction:column;overflow:hidden}
 .spage[hidden]{display:none}
 .spage-head{
   flex:none;display:flex;align-items:center;gap:2px;
@@ -1629,7 +1630,9 @@ let spQ = "", spSeq = 0, spResults = null, spLoading = false, spTimer = null;
 function openSearchPage(){
   document.getElementById("spage").hidden = false;
   renderSPage();
-  setTimeout(() => document.getElementById("sq").focus(), 60);
+  window.scrollTo(0, 0);
+  // preventScroll: iOS 웹뷰가 포커스된 인풋을 향해 페이지를 가로로 밀어 레이아웃이 잘리던 문제
+  setTimeout(() => { try{ document.getElementById("sq").focus({preventScroll:true}); }catch(e){ document.getElementById("sq").focus(); } window.scrollTo(0, 0); }, 60);
 }
 function closeSearchPage(){
   document.getElementById("spage").hidden = true;
