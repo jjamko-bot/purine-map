@@ -274,7 +274,14 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 }
 /* 그립 = 시트 고정 영역(스크롤 밖) — 항상 끌어서 닫기 가능 */
 .sheet-grip{flex:none;padding:6px 20px 0;cursor:grab;touch-action:none}
-.sheet-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 20px calc(24px + env(safe-area-inset-bottom))}
+.sheet-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 20px 16px}
+.sheet-foot{
+  flex:none;display:flex;align-items:center;gap:8px;
+  padding:10px 20px calc(14px + env(safe-area-inset-bottom));
+  background:var(--gray00);
+}
+.sheet-foot:empty{display:none}
+.sheet-foot .s-btn.pri{flex:2} /* 메인 CTA를 세컨더리의 2배 폭으로 */
 .sheet.on{transform:translate(-50%,0)}
 @media (prefers-reduced-motion: no-preference){
   .sheet{transition:transform .3s cubic-bezier(.22,1,.36,1)}
@@ -477,6 +484,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="가게 상세" hidden>
   <div class="sheet-grip" id="sheetGrip"><div class="sheet-grab"></div></div>
   <div class="sheet-body" id="sheetBody"></div>
+  <div class="sheet-foot" id="sheetFoot"></div>
 </section>
 <script>
 const ICONS = {"restaurant": "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g> <g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M11.9445 7.9222C11.9445 10.6458 9.93645 12.9003 7.3201 13.2861V20.8674C7.3201 21.3092 6.96193 21.6674 6.5201 21.6674C6.07827 21.6674 5.7201 21.3092 5.7201 20.8674V13.2855C3.1059 12.8978 1.1001 10.6442 1.1001 7.9222C1.1001 4.9276 3.5277 2.5 6.5223 2.5C9.51689 2.5 11.9445 4.9276 11.9445 7.9222ZM6.5223 11.7444C8.63324 11.7444 10.3445 10.0331 10.3445 7.9222C10.3445 5.81126 8.63324 4.1 6.5223 4.1C4.41135 4.1 2.7001 5.81126 2.7001 7.9222C2.7001 10.0331 4.41135 11.7444 6.5223 11.7444Z\" fill=\"currentColor\"/> <path d=\"M14.9062 8.0001H17.3169V3.8C17.3169 3.35817 17.6751 3 18.1169 3C18.5587 3 18.9169 3.35817 18.9169 3.8V8.0001H21.2939C21.298 7.93393 21.3 7.8672 21.3 7.8V3.8C21.3 3.35817 21.6582 3 22.1 3C22.5419 3 22.9 3.35817 22.9 3.8V7.8C22.9 10.1725 21.1788 12.1429 18.917 12.5308V20.8585C18.917 21.3003 18.5588 21.6585 18.117 21.6585C17.6752 21.6585 17.317 21.3003 17.317 20.8585V12.5364C15.0385 12.1626 13.3 10.1843 13.3 7.8V3.8C13.3 3.35817 13.6582 3 14.1 3C14.5419 3 14.9 3.35817 14.9 3.8V7.8C14.9 7.8672 14.9021 7.93393 14.9062 8.0001Z\" fill=\"currentColor\"/> </g> </g> </svg>", "expand_more": "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M2.93427 7.43427C3.24669 7.12185 3.75322 7.12185 4.06564 7.43427L12 15.3686L19.9343 7.43427C20.2467 7.12185 20.7532 7.12185 21.0656 7.43427C21.3781 7.74669 21.3781 8.25322 21.0656 8.56564L12.5656 17.0656C12.2532 17.3781 11.7467 17.3781 11.4343 17.0656L2.93427 8.56564C2.62185 8.25322 2.62185 7.74669 2.93427 7.43427Z\" fill=\"currentColor\"/> </g> </svg>", "expand_less": "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M21.0657 17.0657C20.7533 17.3782 20.2468 17.3782 19.9344 17.0657L12 9.13142L4.06573 17.0657C3.75331 17.3782 3.24678 17.3782 2.93436 17.0657C2.62194 16.7533 2.62194 16.2468 2.93436 15.9344L11.4344 7.43436C11.7468 7.12194 12.2533 7.12194 12.5657 7.43436L21.0657 15.9344C21.3782 16.2468 21.3782 16.7533 21.0657 17.0657Z\" fill=\"currentColor\"/> </g> </svg>", "close": "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M3.72633 3.72633C4.0281 3.42456 4.51736 3.42456 4.81913 3.72633L12 10.9072L19.1809 3.72633C19.4826 3.42456 19.9719 3.42456 20.2737 3.72633C20.5754 4.0281 20.5754 4.51736 20.2737 4.81913L13.0928 12L20.2737 19.1809C20.5754 19.4826 20.5754 19.9719 20.2737 20.2737C19.9719 20.5754 19.4826 20.5754 19.1809 20.2737L12 13.0928L4.81913 20.2737C4.51736 20.5754 4.0281 20.5754 3.72633 20.2737C3.42456 19.9719 3.42456 19.4826 3.72633 19.1809L10.9072 12L3.72633 4.81913C3.42456 4.51736 3.42456 4.0281 3.72633 3.72633Z\" fill=\"currentColor\"/> </g> </svg>", "add": "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M11.9999 2C12.4712 2 12.8533 2.38206 12.8533 2.85335V11.1467H21.1467C21.6179 11.1467 22 11.5288 22 12.0001C22 12.4713 21.6179 12.8534 21.1467 12.8534H12.8533V21.1466C12.8533 21.6179 12.4712 22 11.9999 22C11.5287 22 11.1466 21.6179 11.1466 21.1466V12.8534H2.85334C2.38205 12.8534 2 12.4713 2 12.0001C2 11.5288 2.38205 11.1467 2.85334 11.1467H11.1466V2.85335C11.1466 2.38206 11.5287 2 11.9999 2Z\" fill=\"currentColor\"/> </g> </svg>", "subtraction": "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M2.19995 12C2.19995 11.5581 2.55812 11.2 2.99995 11.2H21C21.4418 11.2 21.7999 11.5581 21.7999 12C21.7999 12.4418 21.4418 12.8 21 12.8H2.99995C2.55812 12.8 2.19995 12.4418 2.19995 12Z\" fill=\"currentColor\"/> </g> </svg>", "gps": "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g> <g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M16.75 12C16.75 14.6234 14.6234 16.75 12 16.75C9.37665 16.75 7.25 14.6234 7.25 12C7.25 9.37665 9.37665 7.25 12 7.25C14.6234 7.25 16.75 9.37665 16.75 12ZM15.15 12C15.15 13.7397 13.7397 15.15 12 15.15C10.2603 15.15 8.85 13.7397 8.85 12C8.85 10.2603 10.2603 8.85 12 8.85C13.7397 8.85 15.15 10.2603 15.15 12Z\" fill=\"currentColor\"/> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M12.7627 1.51271C12.7627 1.09148 12.4212 0.75 12 0.75C11.5788 0.75 11.2373 1.09148 11.2373 1.51271V2.68746C6.68546 3.05521 3.05521 6.68546 2.68746 11.2373H1.51271C1.09148 11.2373 0.75 11.5788 0.75 12C0.75 12.4212 1.09148 12.7627 1.51271 12.7627H2.68746C3.05521 17.3145 6.68546 20.9448 11.2373 21.3125V22.4873C11.2373 22.9085 11.5788 23.25 12 23.25C12.4212 23.25 12.7627 22.9085 12.7627 22.4873L12.7627 21.3125C17.3145 20.9448 20.9448 17.3145 21.3125 12.7627L22.4873 12.7627C22.9085 12.7627 23.25 12.4212 23.25 12C23.25 11.5788 22.9085 11.2373 22.4873 11.2373H21.3125C20.9448 6.68546 17.3145 3.05521 12.7627 2.68746V1.51271ZM4.1822 12C4.1822 7.68235 7.68235 4.1822 12 4.1822C16.3176 4.1822 19.8178 7.68235 19.8178 12C19.8178 16.3176 16.3176 19.8178 12 19.8178C7.68235 19.8178 4.1822 16.3176 4.1822 12Z\" fill=\"currentColor\"/> </g> </g> </svg>", "retry": "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g> <path d=\"M4.47012 12C4.47012 8.0235 7.69367 4.79995 11.6701 4.79995C15.6466 4.79995 18.8701 8.0235 18.8701 12C18.8701 12.2871 18.8534 12.5699 18.8208 12.8477L17.2358 11.2627C16.9234 10.9503 16.4168 10.9503 16.1044 11.2627C15.792 11.5751 15.792 12.0817 16.1044 12.3941L18.9328 15.2225C19.2453 15.5349 19.7518 15.5349 20.0642 15.2225L22.8926 12.3941C23.2051 12.0817 23.2051 11.5751 22.8926 11.2627C22.5802 10.9503 22.0737 10.9503 21.7613 11.2627L20.4518 12.5722C20.4639 12.3829 20.4701 12.1921 20.4701 12C20.4701 7.13985 16.5302 3.19995 11.6701 3.19995C6.81001 3.19995 2.87012 7.13985 2.87012 12C2.87012 16.8601 6.81001 20.7999 11.6701 20.7999C13.2156 20.7999 14.6703 20.4008 15.9343 19.6995C16.3206 19.4851 16.46 18.9981 16.2456 18.6118C16.0313 18.2255 15.5443 18.0861 15.158 18.3004C14.1254 18.8734 12.9371 19.2 11.6701 19.2C7.69367 19.2 4.47012 15.9764 4.47012 12Z\" fill=\"currentColor\"/> </g> </svg>", "map": "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M22.441 2.33275C22.6651 2.48085 22.7999 2.73155 22.7999 3.0002V18.1581C22.7999 18.4787 22.6086 18.7683 22.3137 18.894L15.647 21.7361C15.4466 21.8216 15.22 21.8216 15.0196 21.7361L8.61013 19.0037L2.21302 20.7713C1.97224 20.8378 1.71419 20.7881 1.51542 20.6368C1.31664 20.4855 1.19995 20.25 1.19995 20.0002V4.8423C1.19995 4.48253 1.44011 4.16702 1.78688 4.0712L8.45355 2.22909C8.62807 2.18087 8.81379 2.19328 8.98035 2.26428L15.3333 4.97264L21.6862 2.26428C21.9333 2.15893 22.2168 2.18465 22.441 2.33275ZM14.5333 6.37092L9.46662 4.21092V17.6295L14.5333 19.7895V6.37092ZM16.1333 19.7895L21.2 17.6295V4.21092L16.1333 6.37092V19.7895ZM7.86662 17.5492V4.05123L2.79995 5.45123V18.9492L7.86662 17.5492Z\" fill=\"currentColor\"/> </g> </svg>", "list": "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g> <g> <path d=\"M4.19995 7C4.75224 7 5.19995 6.55228 5.19995 6C5.19995 5.44772 4.75224 5 4.19995 5C3.64767 5 3.19995 5.44772 3.19995 6C3.19995 6.55228 3.64767 7 4.19995 7Z\" fill=\"currentColor\"/> <path d=\"M8.3 5.2002C7.85817 5.2002 7.5 5.55837 7.5 6.0002C7.5 6.44202 7.85817 6.8002 8.3 6.8002H20.4C20.8418 6.8002 21.2 6.44202 21.2 6.0002C21.2 5.55837 20.8418 5.2002 20.4 5.2002H8.3Z\" fill=\"currentColor\"/> <path d=\"M8.3 11.2002C7.85817 11.2002 7.5 11.5584 7.5 12.0002C7.5 12.442 7.85817 12.8002 8.3 12.8002H20.4C20.8418 12.8002 21.2 12.442 21.2 12.0002C21.2 11.5584 20.8418 11.2002 20.4 11.2002H8.3Z\" fill=\"currentColor\"/> <path d=\"M7.5 18.0002C7.5 17.5584 7.85817 17.2002 8.3 17.2002H20.4C20.8418 17.2002 21.2 17.5584 21.2 18.0002C21.2 18.442 20.8418 18.8002 20.4 18.8002H8.3C7.85817 18.8002 7.5 18.442 7.5 18.0002Z\" fill=\"currentColor\"/> <path d=\"M5.19995 12C5.19995 12.5523 4.75224 13 4.19995 13C3.64767 13 3.19995 12.5523 3.19995 12C3.19995 11.4477 3.64767 11 4.19995 11C4.75224 11 5.19995 11.4477 5.19995 12Z\" fill=\"currentColor\"/> <path d=\"M4.19995 19C4.75224 19 5.19995 18.5523 5.19995 18C5.19995 17.4477 4.75224 17 4.19995 17C3.64767 17 3.19995 17.4477 3.19995 18C3.19995 18.5523 3.64767 19 4.19995 19Z\" fill=\"currentColor\"/> </g> </g> </svg>", "convert": "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g> <g> <path d=\"M9.89913 11.434C10.2116 11.7464 10.2116 12.253 9.89913 12.5654C9.58671 12.8778 9.08018 12.8778 8.76776 12.5654L4.76776 8.56539C4.45534 8.25297 4.45534 7.74644 4.76776 7.43402L8.76776 3.43402C9.08018 3.1216 9.58671 3.1216 9.89913 3.43402C10.2116 3.74644 10.2116 4.25297 9.89913 4.56539L7.26482 7.19971L18.6666 7.19971C19.1084 7.19971 19.4666 7.55788 19.4666 7.99971C19.4666 8.44153 19.1084 8.79971 18.6666 8.79971L7.26482 8.79971L9.89913 11.434Z\" fill=\"currentColor\"/> <path d=\"M14.1009 12.5658C13.7884 12.2534 13.7884 11.7468 14.1009 11.4344C14.4133 11.122 14.9198 11.122 15.2322 11.4344L19.221 15.4231C19.3725 15.5687 19.4668 15.7734 19.4668 16.0001C19.4668 16.2268 19.3725 16.4315 19.221 16.5771L15.2322 20.5658C14.9198 20.8782 14.4133 20.8782 14.1009 20.5658C13.7884 20.2534 13.7884 19.7468 14.1009 19.4344L16.7352 16.8001H5.33345C4.89162 16.8001 4.53345 16.4419 4.53345 16.0001C4.53345 15.5583 4.89162 15.2001 5.33345 15.2001H16.7352L14.1009 12.5658Z\" fill=\"currentColor\"/> </g> </g> </svg>", "home": "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M11.4577 2.20608C11.767 1.93115 12.2331 1.93115 12.5424 2.20608L21.7261 10.3694C21.9004 10.5243 22.0001 10.7463 22.0001 10.9795V21.1836C22.0001 21.6345 21.6346 22 21.1838 22H15.0613C14.6104 22 14.245 21.6345 14.245 21.1836V16.0816C14.245 14.7977 13.2839 13.8367 12.0001 13.8367C10.7162 13.8367 9.75514 14.7977 9.75514 16.0816V21.1836C9.75514 21.6344 9.38966 22 8.93881 22H2.81633C2.36548 22 2 21.6345 2 21.1836V10.9795C2 10.7463 2.09971 10.5243 2.27399 10.3694L11.4577 2.20608ZM8.12248 20.3669V16.0816C8.12248 13.896 9.8145 12.204 12.0001 12.204C14.1856 12.204 15.8776 13.896 15.8776 16.0816V20.3673H20.3674V11.3461L12.0001 3.90842L3.63266 11.3461V20.3673L8.12248 20.3669Z\" fill=\"currentColor\"/> </g> </svg>", "home_f": "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g> <path d=\"M11.4685 2.40202C11.7716 2.13259 12.2283 2.13259 12.5314 2.40202L21.5314 10.402C21.7022 10.5538 21.7999 10.7714 21.7999 11V21C21.7999 21.4418 21.4418 21.7999 21 21.7999H15C14.5581 21.7999 14.2 21.4418 14.2 21V16C14.2 14.7418 13.2581 13.8 12 13.8C10.7418 13.8 9.79995 14.7418 9.79995 16V20.9999C9.79995 21.4417 9.44178 21.7999 8.99995 21.7999H2.99995C2.55812 21.7999 2.19995 21.4418 2.19995 21V11C2.19995 10.7714 2.29767 10.5538 2.46846 10.402L11.4685 2.40202Z\" fill=\"currentColor\"/> </g> </svg>", "bookmark": "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M3.19995 2.99995C3.19995 2.55812 3.55812 2.19995 3.99995 2.19995H20C20.4418 2.19995 20.7999 2.55812 20.7999 2.99995V21C20.7999 21.3106 20.6202 21.5931 20.3388 21.7246C20.0574 21.8562 19.7254 21.813 19.487 21.6139L12 15.3582L4.51289 21.6139C4.27454 21.813 3.94246 21.8562 3.6611 21.7246C3.37973 21.5931 3.19995 21.3106 3.19995 21V2.99995ZM4.79995 3.79995V19.289L11.487 13.7018C11.784 13.4537 12.2159 13.4537 12.5129 13.7018L19.2 19.289V3.79995H4.79995Z\" fill=\"currentColor\"/> </g> </svg>", "bookmark_f": "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M3.19995 2.99995C3.19995 2.55812 3.55812 2.19995 3.99995 2.19995H20C20.4418 2.19995 20.7999 2.55812 20.7999 2.99995V21C20.7999 21.3106 20.6202 21.5931 20.3388 21.7246C20.0574 21.8562 19.7254 21.813 19.487 21.6139L12 15.3582L4.51289 21.6139C4.27454 21.813 3.94246 21.8562 3.6611 21.7246C3.37973 21.5931 3.19995 21.3106 3.19995 21V2.99995Z\" fill=\"currentColor\"/> </g> </svg>", "map_f": "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M2.60783 5.58295L8 3.28418V18.4421L3.39217 20.4065C2.73251 20.6877 2 20.2037 2 19.4866V6.50284C2 6.10212 2.23921 5.74009 2.60783 5.58295ZM15 20.8579L9.6 18.5558V3.39786L15 5.69997V20.8579ZM16.6 20.46L21.3922 18.417C21.7608 18.2598 22 17.8978 22 17.4971V4.51337C22 3.79627 21.2675 3.31225 20.6078 3.59347L16.6 5.30207V20.46Z\" fill=\"currentColor\"/> </g> </svg>", "search": "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M10.5002 2.19995C5.91623 2.19995 2.2002 5.91599 2.2002 10.5C2.2002 15.0839 5.91623 18.8 10.5002 18.8C12.5041 18.8 14.3421 18.0898 15.7763 16.9075L20.4345 21.5656C20.7469 21.8781 21.2535 21.8781 21.5659 21.5656C21.8783 21.2532 21.8783 20.7467 21.5659 20.4343L16.9077 15.7761C18.0901 14.3419 18.8002 12.5038 18.8002 10.5C18.8002 5.91599 15.0842 2.19995 10.5002 2.19995ZM3.8002 10.5C3.8002 6.79964 6.79989 3.79995 10.5002 3.79995C14.2005 3.79995 17.2002 6.79964 17.2002 10.5C17.2002 14.2003 14.2005 17.2 10.5002 17.2C6.79989 17.2 3.8002 14.2003 3.8002 10.5Z\" fill=\"currentColor\"/> </g> </svg>", "back": "<svg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M16.66 3.22988C16.96 3.52988 16.96 4.01988 16.66 4.31988L8.97999 11.9999L16.66 19.6799C16.96 19.9799 16.96 20.4699 16.66 20.7699C16.36 21.0699 15.87 21.0699 15.57 20.7699L7.33999 12.5499C7.03999 12.2499 7.03999 11.7599 7.33999 11.4599L15.56 3.22988C15.86 2.92988 16.35 2.92988 16.65 3.22988H16.66Z\" fill=\"currentColor\"/> </g> </svg>"};
@@ -775,21 +783,27 @@ function sheetHTML(p){
       <button class="s-close" data-act="close" aria-label="닫기">${ic("close")}</button>
     </header>
     ${p.caution?`<div class="s-caution">⚠ ${esc(p.caution)}</div>`:""}
-    <div class="s-actions">
-      <button class="s-icon" data-act="fav" data-fav="1" aria-label="즐겨찾기에서 관리">${ic("bookmark_f")}</button>
-      ${p.x?`<button class="s-btn" data-act="onmap">${ic("gps")} 지도에서 보기</button>`:""}
-      <a class="s-btn pri" href="https://map.naver.com/p/entry/place/${p.id}" target="_blank" rel="noopener">네이버 지도 ↗</a>
-    </div>
+
     <div class="s-menus">
       ${items.length?`<div class="s-label">메뉴 <b>${items.length}</b> <span class="s-weak">안전한 순</span></div>${menuRows}
         <div class="mnote">네이버 등록 메뉴 기준(주류 제외) · 이름만으로 재료를 알 수 없는 메뉴는 ‘분석 불가’로 표시해요</div>`
       :`<div class="mnote">네이버에 등록된 메뉴 정보가 없는 곳이에요</div>`}
     </div>`;
 }
-function openSheetHTML(html){
+function sheetFootHTML(p){
+  return `<button class="s-icon" data-act="fav" data-fav="1" aria-label="즐겨찾기에서 관리">${ic("bookmark_f")}</button>
+    <a class="s-btn pri" href="https://map.naver.com/p/entry/place/${p.id}" target="_blank" rel="noopener">네이버 지도로 보기</a>`;
+}
+function extFootHTML(p){
+  return `<button class="s-icon" data-act="addmine" aria-label="즐겨찾기에 추가">${ic("bookmark")}</button>
+    ${p.m===null?`<button class="s-btn" data-act="extmenus">퓨린 분석</button>`:""}
+    <a class="s-btn pri" href="https://map.naver.com/p/entry/place/${p.id}" target="_blank" rel="noopener">네이버 지도로 보기</a>`;
+}
+function openSheetHTML(html, foot){
   sheetOpen = true;
   const sh = document.getElementById("sheet"), dim = document.getElementById("dim");
   document.getElementById("sheetBody").innerHTML = html;
+  document.getElementById("sheetFoot").innerHTML = foot || "";
   sh.hidden = false; dim.hidden = false;
   document.getElementById("sheetBody").scrollTop = 0;
   requestAnimationFrame(() => { sh.classList.add("on"); dim.classList.add("on"); });
@@ -836,11 +850,7 @@ function extSheetHTML(p){
       <button class="s-close" data-act="close" aria-label="닫기">${ic("close")}</button>
     </header>
     ${p.caution?`<div class="s-caution">⚠ ${esc(p.caution)}</div>`:""}
-    <div class="s-actions">
-      <button class="s-icon" data-act="addmine" aria-label="즐겨찾기에 추가">${ic("bookmark")}</button>
-      <a class="s-btn${p.m===null?"":" pri"}" href="https://map.naver.com/p/entry/place/${p.id}" target="_blank" rel="noopener">네이버 지도 ↗</a>
-      ${p.m===null?`<button class="s-btn pri" data-act="extmenus">${ic("restaurant")} 메뉴 분석하기</button>`:""}
-    </div>
+
     ${menuSec}`;
 }
 function openExtSheet(r){
@@ -848,12 +858,12 @@ function openExtSheet(r){
   const gr = gradePlaceCat(r.cat);
   extPlace = {...r, grade:gr.grade, reason:gr.reason, caution:RULES.CAUTION[r.cat]||"", m:null};
   sheetId = null;
-  openSheetHTML(extSheetHTML(extPlace));
+  openSheetHTML(extSheetHTML(extPlace), extFootHTML(extPlace));
 }
 function openSheet(id){
   const p = DATA.find(x=>x.id===id); if(!p) return;
   sheetId = id;
-  openSheetHTML(sheetHTML(p));
+  openSheetHTML(sheetHTML(p), sheetFootHTML(p));
   if(curView==="map") drawMap();
 }
 function closeSheet(){
@@ -914,8 +924,9 @@ document.getElementById("sheet").addEventListener("click", e => {
           if(!extPlace) return;
           extPlace.m = (j.menus||[]).filter(mn => !isSkipMenu(mn.n)).map(mn => ({...mn, g: gradeMenuName(mn.n)}));
           document.getElementById("sheetBody").innerHTML = extSheetHTML(extPlace);
+          document.getElementById("sheetFoot").innerHTML = extFootHTML(extPlace);
         })
-        .catch(() => { if(extPlace){ extPlace.m = []; document.getElementById("sheetBody").innerHTML = extSheetHTML(extPlace); } });
+        .catch(() => { if(extPlace){ extPlace.m = []; document.getElementById("sheetBody").innerHTML = extSheetHTML(extPlace); document.getElementById("sheetFoot").innerHTML = extFootHTML(extPlace); } });
       return;
     }
     if(b.dataset.act==="addmine"){
@@ -936,12 +947,6 @@ document.getElementById("sheet").addEventListener("click", e => {
   if(b.dataset.act==="fav"){
     closeSheet(); removeFav(p.id);
     return;
-  }
-  if(b.dataset.act==="onmap"){
-    closeSheet();
-    curView = "map"; setView();
-    M.cx = p.x; M.cy = mercY(p.y); M.k = Math.max(M.k, 12000);
-    saveCam(); drawMap();
   }
 });
 
