@@ -111,7 +111,8 @@ h1{font-size:1.25rem;font-weight:800;letter-spacing:-.02em}
 }
 .reco-btn .ic{width:20px;height:20px}
 .reco-btn:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px}
-.reco-scroll{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;padding:0 0 4px;scroll-snap-type:x proximity}
+/* 풀블리드 스크롤 — 카드가 .wrap 패딩이 아닌 화면 끝에서 잘리도록 */
+.reco-scroll{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px 4px;scroll-snap-type:x proximity;scroll-padding-left:16px}
 .reco-scroll::-webkit-scrollbar{display:none}
 .reco-card{
   flex-shrink:0;width:128px;border:0;background:none;font-family:inherit;text-align:left;cursor:pointer;
@@ -190,9 +191,7 @@ body.mapon > header{
 body.mapon .head-top{display:none}
 body.mapon #tabs{display:none}
 body.mapon .qwrap{pointer-events:auto;margin-top:12px}
-body.mapon .search{background:#ffffff;color:#26282b;box-shadow:0 2px 12px rgba(0,0,0,.24)}
-body.mapon .search::placeholder{color:#868b94}
-body.mapon .qclear{color:#868b94}
+body.mapon .search{background:var(--gray00);color:var(--gray900);box-shadow:0 2px 12px rgba(0,0,0,.28)}
 body.mapon #mapwrap{display:block;flex:1;min-height:0;max-width:none;width:100%;padding:0;margin:0}
 body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 .hoods{
@@ -321,6 +320,12 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 .fav-note{font-size:0.8125rem;color:var(--gray600);line-height:1.6;background:var(--gray50);border-radius:12px;padding:12px 14px}
 .fav-note b{color:var(--gray700)}
 .fav-note a{color:var(--carrot500);font-weight:700;text-decoration:none}
+.fav-add{
+  width:100%;height:46px;margin:2px 0 8px;border:1px dashed var(--gray300);border-radius:12px;background:none;
+  color:var(--gray600);font-family:inherit;font-size:0.875rem;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:5px;
+}
+.fav-add .ic{width:15px;height:15px}
 .fav-row{display:flex;align-items:center;gap:2px}
 .fav-row .row{flex:1;min-width:0}
 .fav-x{flex-shrink:0;width:32px;height:32px;border:0;border-radius:50%;background:none;color:var(--gray500);display:flex;align-items:center;justify-content:center;cursor:pointer}
@@ -482,6 +487,10 @@ function isSkipMenu(name){
 let EXTRA = [];
 try{ EXTRA = JSON.parse(store.getItem("pm-extra")||"[]"); }catch(e){}
 EXTRA.forEach(p => { if(!DATA.some(d => d.id === p.id)) DATA.push(p); });
+// 네이버 폴더 가게의 로컬 숨김 (즐겨찾기 탭 ✕) — id 기준이라 데이터 갱신에도 유지
+let HIDDEN = new Set(), hiddenData = [];
+try{ HIDDEN = new Set(JSON.parse(store.getItem("pm-hidden")||"[]")); }catch(e){}
+for(let i = DATA.length-1; i >= 0; i--){ if(HIDDEN.has(DATA[i].id)){ hiddenData.push(DATA[i]); DATA.splice(i,1); } }
 function nvSearch(){
   const q = query;
   if(q.length < 2){ nvResults = null; return; }
@@ -864,8 +873,8 @@ document.getElementById("sheet").addEventListener("click", e => {
   if(sheetId===null) return;
   const p = DATA.find(x=>x.id===sheetId);
   if(b.dataset.act==="fav"){
-    if(EXTRA.some(x => x.id === p.id)){ const nm = p.name; closeSheet(); removeExtra(p.id); toast(`${nm}을(를) 목록에서 뺐어요`); }
-    else toast("네이버 지도 🦊 폴더에서 관리되는 즐겨찾기예요");
+    const nm = p.name; closeSheet(); removeFav(p.id);
+    toast(EXTRA.some(x=>x.id===p.id) ? `${nm} — 목록에서 뺐어요` : `${nm} — 숨겼어요 (즐겨찾기 탭에서 복원)`);
     return;
   }
   if(b.dataset.act==="onmap"){
@@ -913,7 +922,8 @@ document.getElementById("list").addEventListener("keydown", e => {
 /* ── 지도 ── */
 // 내 목록 = 별 마커(네이버 즐겨찾기 문법), 주변/검색 결과 = 링 마커
 function starSVG(color, size){
-  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" style="display:block;filter:drop-shadow(0 1px 3px rgba(0,0,0,.4))"><path d="M12 2.6l2.72 5.8 6.08.74-4.5 4.28 1.2 6.06L12 16.9l-5.5 2.58 1.2-6.06-4.5-4.28 6.08-.74z" fill="${color}" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/></svg>`;
+  // 등급색 원 + 흰 별 — 링 마커(흰 원+등급색 테두리)와 같은 원형 패밀리
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" style="display:block;filter:drop-shadow(0 1px 3px rgba(0,0,0,.4))"><circle cx="12" cy="12" r="10.4" fill="${color}" stroke="#fff" stroke-width="1.8"/><path d="M12 6.2 13.62 9.78 17.52 10.21 14.62 12.85 15.41 16.69 12 14.75 8.59 16.69 9.38 12.85 6.48 10.21 10.38 9.78 Z" fill="#fff"/></svg>`;
 }
 const cv = document.getElementById("mapcv");
 const ctx = cv.getContext("2d");
@@ -988,16 +998,19 @@ function drawMap(){
     const g = gradeOf(p);
     const [sx,sy] = toScr(p.x, mercY(p.y));
     if(sx<-10||sx>r.width+10||sy<-10||sy>r.height+10) continue;
+    const R = sheetId===p.id ? 10 : 8;
     ctx.fillStyle = GC[g];
-    const R = sheetId===p.id ? 10 : 7.5;
+    ctx.beginPath(); ctx.arc(sx,sy,R,0,7); ctx.fill();
+    ctx.strokeStyle = cssv("--gray00"); ctx.lineWidth = sheetId===p.id?2:1.5; ctx.stroke();
+    ctx.fillStyle = "#fff";
     ctx.beginPath();
+    const SR = R*0.62;
     for(let i=0;i<10;i++){
-      const rr = i%2 ? R*0.46 : R, a = -Math.PI/2 + i*Math.PI/5;
+      const rr = i%2 ? SR*0.47 : SR, a = -Math.PI/2 + i*Math.PI/5;
       const px = sx + rr*Math.cos(a), py = sy + rr*Math.sin(a);
       i ? ctx.lineTo(px,py) : ctx.moveTo(px,py);
     }
     ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = cssv("--gray00"); ctx.lineJoin = "round"; ctx.lineWidth = sheetId===p.id?2:1.5; ctx.stroke();
   }
   if(M.k > 5000){
     ctx.font = "600 11px 'Pretendard Variable',sans-serif"; ctx.textAlign = "left";
@@ -1246,10 +1259,14 @@ function nRefresh(){
   let lblOk = new Set();
   if(showLbl){
     const proj = NMAP.getProjection();
-    lblOk = declutter(mapPlaces().map(p => {
+    const pool = mapPlaces().map(p => {
       const o = proj.fromCoordToOffset(new naver.maps.LatLng(p.y, p.x));
       return {x:o.x, y:o.y, name:p.name, grade:gradeOf(p), id:p.id};
+    }).concat(ringPlaces().map(p => {
+      const o = proj.fromCoordToOffset(new naver.maps.LatLng(p.y, p.x));
+      return {x:o.x, y:o.y, name:p.name, grade:gradePlaceCat(p.cat).grade, id:p.id};
     }));
+    lblOk = declutter(pool);
   }
   for(const p of mapPlaces()){
     const g = gradeOf(p);
@@ -1268,7 +1285,7 @@ function nRefresh(){
   const nSearchMode = query.length >= 2 && nvResults;
   for(const p of ringPlaces()){
     const g = gradePlaceCat(p.cat).grade;
-    const rlbl = nSearchMode ? `<div style="position:absolute;top:16px;left:50%;transform:translateX(-50%);white-space:nowrap;font:600 11px Pretendard,'Pretendard Variable',sans-serif;color:#26282b;text-shadow:0 1px 2px #fff,0 -1px 2px #fff,1px 0 2px #fff,-1px 0 2px #fff">${esc(p.name)}</div>` : "";
+    const rlbl = (nSearchMode || (showLbl && lblOk.has(p.id))) ? `<div style="position:absolute;top:16px;left:50%;transform:translateX(-50%);white-space:nowrap;font:600 11px Pretendard,'Pretendard Variable',sans-serif;color:#26282b;text-shadow:0 1px 2px #fff,0 -1px 2px #fff,1px 0 2px #fff,-1px 0 2px #fff">${esc(p.name)}</div>` : "";
     const mk = new naver.maps.Marker({
       position: new naver.maps.LatLng(p.y, p.x), map: NMAP, title: p.name,
       icon: {
@@ -1343,10 +1360,14 @@ function lRefresh(){
   const showLbl = LMAP.getZoom() >= 13;
   let lblOk = new Set();
   if(showLbl){
-    lblOk = declutter(mapPlaces().map(p => {
+    const pool = mapPlaces().map(p => {
       const o = LMAP.latLngToContainerPoint([p.y, p.x]);
       return {x:o.x, y:o.y, name:p.name, grade:gradeOf(p), id:p.id};
+    }).concat(ringPlaces().map(p => {
+      const o = LMAP.latLngToContainerPoint([p.y, p.x]);
+      return {x:o.x, y:o.y, name:p.name, grade:gradePlaceCat(p.cat).grade, id:p.id};
     }));
+    lblOk = declutter(pool);
   }
   for(const p of mapPlaces()){
     const g = gradeOf(p);
@@ -1361,7 +1382,7 @@ function lRefresh(){
   for(const p of ringPlaces()){
     const g = gradePlaceCat(p.cat).grade;
     const mk = L.circleMarker([p.y, p.x], {radius:6.5, color:GC[g], weight:3, fillColor:"#ffffff", fillOpacity:1});
-    if(searchMode) mk.bindTooltip(p.name, {permanent:true, direction:"bottom", offset:[0,8], className:"plabel"});
+    if(searchMode || (showLbl && lblOk.has(p.id))) mk.bindTooltip(p.name, {permanent:true, direction:"bottom", offset:[0,8], className:"plabel"});
     else mk.bindTooltip(p.name, {direction:"top", offset:[0,-8], opacity:0.95});
     mk.on("click", () => openExtSheet(p));
     mk.addTo(lLayer);
@@ -1412,10 +1433,29 @@ function renderFavs(){
   const extIds = new Set(EXTRA.map(p => p.id));
   const added = EXTRA.slice().reverse(); // 최근 추가 먼저
   const folder = DATA.filter(p => !extIds.has(p.id)).slice().sort((a,b) => a.name.localeCompare(b.name, "ko"));
-  const rows = added.concat(folder).map(p => extIds.has(p.id)
-    ? `<div class="fav-row">${rowHTML(p)}<button class="fav-x" data-del="${p.id}" aria-label="${esc(p.name)} 즐겨찾기에서 빼기">${ic("close")}</button></div>`
-    : rowHTML(p)).join("");
-  document.getElementById("favs").innerHTML = `<div class="fav-list">${rows}</div>`;
+  const rows = added.concat(folder).map(p =>
+    `<div class="fav-row">${rowHTML(p)}<button class="fav-x" data-del="${p.id}" aria-label="${esc(p.name)} 즐겨찾기에서 빼기">${ic("close")}</button></div>`).join("");
+  document.getElementById("favs").innerHTML = `
+    <button class="fav-add" data-act="addsearch">${ic("add")} 검색해서 추가</button>
+    <div class="fav-list">${rows}</div>
+    ${HIDDEN.size ? `<button class="fav-reset" data-act="unhide">숨긴 즐겨찾기 ${HIDDEN.size}곳 모두 복원</button>` : ""}`;
+}
+function removeFav(id){
+  if(EXTRA.some(x => x.id === id)) removeExtra(id);
+  else hideFav(id);
+}
+function hideFav(id){
+  const i = DATA.findIndex(p => p.id === id); if(i < 0) return;
+  hiddenData.push(DATA[i]); DATA.splice(i, 1);
+  HIDDEN.add(id);
+  try{ store.setItem("pm-hidden", JSON.stringify([...HIDDEN])); }catch(e){}
+  HOODS = null; renderHoods(); render(); renderFavs();
+}
+function unhideAll(){
+  HIDDEN.clear();
+  try{ store.setItem("pm-hidden", "[]"); }catch(e){}
+  hiddenData.forEach(p => DATA.push(p)); hiddenData = [];
+  HOODS = null; renderHoods(); render(); renderFavs();
 }
 function removeExtra(id){
   EXTRA = EXTRA.filter(p => p.id !== id);
@@ -1427,7 +1467,13 @@ function removeExtra(id){
 }
 document.getElementById("favs").addEventListener("click", e => {
   const del = e.target.closest("[data-del]");
-  if(del){ removeExtra(del.dataset.del); return; }
+  if(del){ removeFav(del.dataset.del); return; }
+  if(e.target.closest("[data-act='addsearch']")){
+    curView = "home"; setView(); window.scrollTo(0,0);
+    document.getElementById("q").focus();
+    return;
+  }
+  if(e.target.closest("[data-act='unhide']")){ unhideAll(); return; }
   const un = e.target.closest("[data-unov]");
   if(un){ delete overrides[un.dataset.unov]; store.setItem("purine-overrides", JSON.stringify(overrides)); render(); renderFavs(); return; }
   if(e.target.closest("[data-act='ovreset']")){ overrides = {}; store.setItem("purine-overrides","{}"); render(); renderFavs(); return; }
