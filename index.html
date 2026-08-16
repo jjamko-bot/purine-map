@@ -1564,20 +1564,13 @@ function autoNearby(){
 
 
 /* ── 즐겨찾기(관리) 뷰 ── */
-let favFolder = ""; // "" = 전체
 function renderFavs(){
   const extIds = new Set(EXTRA.map(p => p.id));
-  const folderNames = [...new Set(DATA.flatMap(p => p.folders || []))];
-  const inFolder = p => !favFolder || (p.folders || []).includes(favFolder);
-  const added = favFolder ? [] : EXTRA.slice().reverse(); // 앱 추가분은 전체에서만
-  const folder = DATA.filter(p => !extIds.has(p.id) && inFolder(p)).slice().sort((a,b) => a.name.localeCompare(b.name, "ko"));
-  const chips = folderNames.length > 1 ? `<div class="fav-chips">
-      <button class="fav-chip" data-folder="" data-on="${favFolder===""?1:0}">전체 ${DATA.length}</button>
-      ${folderNames.map(f => `<button class="fav-chip" data-folder="${esc(f)}" data-on="${favFolder===f?1:0}">${esc(f)} ${DATA.filter(p=>(p.folders||[]).includes(f)).length}</button>`).join("")}
-    </div>` : "";
+  const added = EXTRA.slice().reverse(); // 최근 추가 먼저
+  const folder = DATA.filter(p => !extIds.has(p.id)).slice().sort((a,b) => a.name.localeCompare(b.name, "ko"));
   const rows = added.concat(folder).map(p =>
     `<div class="fav-row">${rowHTML(p)}<button class="fav-x" data-del="${p.id}" aria-label="${esc(p.name)} 즐겨찾기 해제">${ic("bookmark_f")}</button></div>`).join("");
-  document.getElementById("favs").innerHTML = `${chips}<div class="fav-list">${rows}</div>`;
+  document.getElementById("favs").innerHTML = `<div class="fav-list">${rows}</div>`;
 }
 function removeFav(id){
   const isExtra = EXTRA.some(x => x.id === id);
@@ -1612,8 +1605,6 @@ function removeExtra(id){
   HOODS = null; renderHoods(); render(); renderFavs();
 }
 document.getElementById("favs").addEventListener("click", e => {
-  const fc = e.target.closest(".fav-chip");
-  if(fc){ favFolder = fc.dataset.folder; renderFavs(); window.scrollTo(0,0); return; }
   const del = e.target.closest("[data-del]");
   if(del){ removeFav(del.dataset.del); return; }
   const un = e.target.closest("[data-unov]");
