@@ -1324,7 +1324,7 @@ function autoLocate(){
     userLoc = {x:pos.coords.longitude, y:pos.coords.latitude};
     if(curView==="map") applyUserLoc();
     else render();
-  }, ()=>{ if(curView==="list") render(); }, {timeout:6000, maximumAge:300000});
+  }, ()=>{ if(curView!=="map") render(); }, {timeout:6000, maximumAge:300000});
 }
 function tryNaver(){
   if(naverTried || !NAVER_CLIENT_ID) { if(!NAVER_CLIENT_ID) tryLeaflet(); return; }
@@ -1373,7 +1373,8 @@ function initNaver(){
     if(!NMAP || !window.naver || !naver.maps) return; // authFailure로 SDK가 내려간 뒤 타이머가 도는 경우
     naver.maps.Event.trigger(NMAP, "resize");
     if(el.clientWidth < 50 && tries < 25) return setTimeout(()=>boot(tries+1), 200);
-    if(!cam) nvFit(mapPlaces());
+    if(userLoc){ NMAP.setCenter(new naver.maps.LatLng(userLoc.y, userLoc.x)); NMAP.setZoom(14, false); } // 내 위치 우선 (v8.3 의도 복원)
+    else if(!cam) nvFit(mapPlaces());
     nRefresh();
     autoLocate();
   };
@@ -1461,7 +1462,8 @@ function initLeaflet(){
       if(LMAP.getSize().x < 50 && tries < 25) return setTimeout(()=>boot(tries+1), 200);
       let cam = null;
       try{ cam = JSON.parse(store.getItem("pm-lcam")); }catch(e){}
-      if(cam && cam.z) LMAP.setView([cam.lat, cam.lng], cam.z);
+      if(userLoc) LMAP.setView([userLoc.y, userLoc.x], 14); // 내 위치 우선 (v8.3 의도 복원)
+      else if(cam && cam.z) LMAP.setView([cam.lat, cam.lng], cam.z);
       else lFit(mapPlaces());
       LMAP.on("dragstart", clearHood);
       let lzPrev = null;
