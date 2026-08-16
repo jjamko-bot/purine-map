@@ -929,34 +929,57 @@ function closeSheet(){
 }
 document.getElementById("dim").addEventListener("click", closeSheet);
 document.addEventListener("keydown", e => { if(e.key==="Escape") closeSheet(); });
-// 스와이프 다운으로 닫기 — 그립은 항상, 본문은 맨 위로 스크롤된 상태에서만
-// (그립이 시트 고정 영역이라 콘텐츠를 얼마나 내렸든 끌어서 닫을 수 있다)
+// 스와이프 다운으로 닫기 — 연속 제스처 핸드오프(v17.4):
+// 본문을 당기다 스크롤이 맨 위(0)에 닿으면, 손을 떼지 않아도 같은 제스처가 시트 끌어내리기로 전환된다.
+// 그립은 스크롤 위치와 무관하게 항상 드래그. 위로 도로 밀면 드래그를 풀어 스크롤로 복귀.
 (function(){
-  const sh = document.getElementById("sheet"), body = document.getElementById("sheetBody");
-  let sy = null, dy = 0, dragging = false, fromGrip = false;
-  sh.addEventListener("pointerdown", e => {
-    fromGrip = !!e.target.closest("#sheetGrip");
-    if(!fromGrip && body.scrollTop > 0) return;
-    sy = e.clientY; dy = 0; dragging = false;
-  });
-  sh.addEventListener("pointermove", e => {
-    if(sy === null) return;
-    dy = e.clientY - sy;
-    if(dy > 8 && (fromGrip || body.scrollTop <= 0)){
-      dragging = true;
-      sh.style.transition = "none";
-      sh.style.transform = `translate(-50%, ${Math.max(0,dy)}px)`;
-      e.preventDefault();
-    }
-  });
-  const end = () => {
-    if(sy === null) return;
-    sh.style.transition = ""; sh.style.transform = "";
-    if(dragging && dy > 90) closeSheet();
-    sy = null; dragging = false; fromGrip = false;
+  const sh = document.getElementById("sheet"), body = document.getElementById("sheetBody"), grip = document.getElementById("sheetGrip");
+  let originY = null, dy = 0, dragging = false;
+  const begin = y => { originY = y; dy = 0; dragging = true; sh.style.transition = "none"; };
+  const move = y => { dy = Math.max(0, y - originY); sh.style.transform = `translate(-50%, ${dy}px)`; };
+  const release = () => { dragging = false; originY = null; sh.style.transition = ""; sh.style.transform = ""; };
+  const finish = () => {
+    if(!dragging) return;
+    const close = dy > 90;
+    release();
+    if(close) closeSheet();
   };
-  sh.addEventListener("pointerup", end);
-  sh.addEventListener("pointercancel", end);
+
+  // 그립: 항상 드래그 (마우스·터치 공통, pointer)
+  grip.addEventListener("pointerdown", e => { begin(e.clientY); try{ grip.setPointerCapture(e.pointerId); }catch(err){} });
+  grip.addEventListener("pointermove", e => { if(dragging) move(e.clientY); });
+  grip.addEventListener("pointerup", finish);
+  grip.addEventListener("pointercancel", finish);
+
+  // 본문(터치): 연속 핸드오프
+  let touching = false, lastY = 0;
+  body.addEventListener("touchstart", e => { touching = true; lastY = e.touches[0].clientY; }, {passive: true});
+  body.addEventListener("touchmove", e => {
+    if(!touching) return;
+    const y = e.touches[0].clientY;
+    if(dragging){
+      if(y - originY <= 0){ release(); }        // 도로 올림 → 스크롤로 복귀
+      else { move(y); e.preventDefault(); }
+      lastY = y; return;
+    }
+    if(body.scrollTop <= 0 && y > lastY){        // 맨 위에서 아래로 → 즉시 시트 드래그로 전환
+      begin(lastY);
+      move(y); e.preventDefault();
+    }
+    lastY = y;
+  }, {passive: false});
+  body.addEventListener("touchend", () => { touching = false; finish(); }, {passive: true});
+  body.addEventListener("touchcancel", () => { touching = false; finish(); }, {passive: true});
+
+  // 본문(마우스, 데스크톱 폴백): 맨 위에서 누르고 당기면 닫기 — 기존 동작 유지
+  let msy = null;
+  body.addEventListener("pointerdown", e => { if(e.pointerType === "mouse" && body.scrollTop <= 0) msy = e.clientY; });
+  body.addEventListener("pointermove", e => {
+    if(e.pointerType !== "mouse" || msy === null) return;
+    if(!dragging && e.clientY - msy > 8) begin(msy);
+    if(dragging) move(e.clientY);
+  });
+  body.addEventListener("pointerup", e => { if(e.pointerType === "mouse"){ msy = null; finish(); } });
 })();
 document.getElementById("sheet").addEventListener("click", e => {
   const b = e.target.closest("[data-act]"); if(!b) return;
