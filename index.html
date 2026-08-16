@@ -55,6 +55,7 @@ body{
 .bnav-item .ic{width:22px;height:22px}
 .bnav-item:focus-visible{outline:2px solid var(--carrot500);outline-offset:-2px}
 body.favson .logo, body.favson .head-count{display:none}
+body.favson > header{border-bottom:0}
 body.locked{overflow:hidden}
 .wrap{max-width:520px;margin:0 auto;padding:0 16px}
 
@@ -254,7 +255,13 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 .mbtn:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px}
 .maptoast{
   position:fixed;left:50%;transform:translateX(-50%);bottom:calc(140px + env(safe-area-inset-bottom));z-index:60;background:var(--gray900);color:var(--gray00);
-  font-size:0.8125rem;font-weight:600;padding:9px 16px;border-radius:999px;display:none;white-space:nowrap;max-width:92%;
+  font-size:0.8125rem;font-weight:600;padding:9px 10px 9px 16px;border-radius:999px;display:none;white-space:nowrap;max-width:92%;
+  align-items:center;gap:4px;
+}
+.toast-msg{overflow:hidden;text-overflow:ellipsis}
+.toast-undo{
+  flex-shrink:0;border:0;background:none;color:var(--carrot500);font-family:inherit;
+  font-size:0.8125rem;font-weight:800;padding:4px 8px;cursor:pointer;
 }
 
 /* ── 바텀시트 ── */
@@ -888,8 +895,7 @@ document.getElementById("sheet").addEventListener("click", e => {
   if(sheetId===null) return;
   const p = DATA.find(x=>x.id===sheetId);
   if(b.dataset.act==="fav"){
-    const nm = p.name; closeSheet(); removeFav(p.id);
-    toast(EXTRA.some(x=>x.id===p.id) ? `${nm} — 목록에서 뺐어요` : `${nm} — 숨겼어요 (즐겨찾기 탭에서 복원)`);
+    closeSheet(); removeFav(p.id);
     return;
   }
   if(b.dataset.act==="onmap"){
@@ -1076,8 +1082,18 @@ document.getElementById("hoods").addEventListener("click", e => {
 });
 function toast(msg){
   const t = document.getElementById("maptoast");
-  t.textContent = msg; t.style.display = "block";
+  t.textContent = msg; t.style.display = "flex";
   clearTimeout(t._tm); t._tm = setTimeout(()=>t.style.display="none", 3200);
+}
+function toastUndo(msg, fn){
+  // 당근 관심목록 패턴 — 해제 후 토스트에서 실행취소
+  const t = document.getElementById("maptoast");
+  t.innerHTML = `<span class="toast-msg">${esc(msg)}</span><button class="toast-undo">실행취소</button>`;
+  t.style.display = "flex";
+  t.querySelector(".toast-undo").addEventListener("click", () => {
+    fn(); t.style.display = "none"; clearTimeout(t._tm);
+  });
+  clearTimeout(t._tm); t._tm = setTimeout(()=>t.style.display="none", 5000);
 }
 function mapJump(){
   if(query.length >= 2){
@@ -1463,26 +1479,30 @@ function renderFavs(){
   const folder = DATA.filter(p => !extIds.has(p.id) && matches(p)).slice().sort((a,b) => a.name.localeCompare(b.name, "ko"));
   const rows = added.concat(folder).map(p =>
     `<div class="fav-row">${rowHTML(p)}<button class="fav-x" data-del="${p.id}" aria-label="${esc(p.name)} 즐겨찾기 해제">${ic("bookmark_f")}</button></div>`).join("");
-  document.getElementById("favs").innerHTML = `
-    <button class="fav-add" data-act="addsearch">${ic("add")} 검색해서 추가</button>
-    <div class="fav-list">${rows}</div>
-    ${HIDDEN.size ? `<button class="fav-reset" data-act="unhide">숨긴 즐겨찾기 ${HIDDEN.size}곳 모두 복원</button>` : ""}`;
+  document.getElementById("favs").innerHTML = `<div class="fav-list">${rows}</div>`;
 }
 function removeFav(id){
-  if(EXTRA.some(x => x.id === id)) removeExtra(id);
-  else hideFav(id);
+  const isExtra = EXTRA.some(x => x.id === id);
+  const p = DATA.find(x => x.id === id); if(!p) return;
+  if(isExtra) removeExtra(id); else hideFav(id);
+  toastUndo(`${p.name} — 즐겨찾기에서 뺐어요`, () => {
+    if(isExtra){
+      EXTRA.push(p); DATA.push(p);
+      try{ store.setItem("pm-extra", JSON.stringify(EXTRA)); }catch(e){}
+    }else{
+      HIDDEN.delete(id);
+      try{ store.setItem("pm-hidden", JSON.stringify([...HIDDEN])); }catch(e){}
+      const i = hiddenData.findIndex(x => x.id === id);
+      if(i >= 0){ DATA.push(hiddenData[i]); hiddenData.splice(i, 1); }
+    }
+    HOODS = null; renderHoods(); render(); renderFavs();
+  });
 }
 function hideFav(id){
   const i = DATA.findIndex(p => p.id === id); if(i < 0) return;
   hiddenData.push(DATA[i]); DATA.splice(i, 1);
   HIDDEN.add(id);
   try{ store.setItem("pm-hidden", JSON.stringify([...HIDDEN])); }catch(e){}
-  HOODS = null; renderHoods(); render(); renderFavs();
-}
-function unhideAll(){
-  HIDDEN.clear();
-  try{ store.setItem("pm-hidden", "[]"); }catch(e){}
-  hiddenData.forEach(p => DATA.push(p)); hiddenData = [];
   HOODS = null; renderHoods(); render(); renderFavs();
 }
 function removeExtra(id){
@@ -1496,12 +1516,6 @@ function removeExtra(id){
 document.getElementById("favs").addEventListener("click", e => {
   const del = e.target.closest("[data-del]");
   if(del){ removeFav(del.dataset.del); return; }
-  if(e.target.closest("[data-act='addsearch']")){
-    curView = "home"; setView(); window.scrollTo(0,0);
-    document.getElementById("q").focus();
-    return;
-  }
-  if(e.target.closest("[data-act='unhide']")){ unhideAll(); return; }
   const un = e.target.closest("[data-unov]");
   if(un){ delete overrides[un.dataset.unov]; store.setItem("purine-overrides", JSON.stringify(overrides)); render(); renderFavs(); return; }
   if(e.target.closest("[data-act='ovreset']")){ overrides = {}; store.setItem("purine-overrides","{}"); render(); renderFavs(); return; }
