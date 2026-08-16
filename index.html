@@ -67,6 +67,7 @@ h1{font-size:1.25rem;font-weight:800;letter-spacing:-.02em}
 .logo{width:26px;height:18px;flex-shrink:0}
 .head-count{font-size:0.8125rem;color:var(--gray600);font-variant-numeric:tabular-nums}
 .qwrap{position:relative}
+.qwrap[hidden],.tabs[hidden]{display:none}
 .qclear{
   position:absolute;right:6px;top:50%;transform:translateY(-50%);width:28px;height:28px;border:0;border-radius:50%;
   background:none;color:var(--gray600);display:flex;align-items:center;justify-content:center;cursor:pointer;
@@ -300,7 +301,9 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 .mnote{font-size:0.6875rem;color:var(--gray500);padding:8px 0 2px}
 
 /* ── 즐겨찾기(관리) 뷰 ── */
-#favs{padding-top:18px}
+#favs{padding-top:16px}
+#favs .fav-note{margin-bottom:6px}
+.fav-list{padding-bottom:8px}
 .fav-sec{margin-bottom:30px}
 .fav-sec h2{font-size:1rem;font-weight:800;margin-bottom:10px}
 .fav-sec h2 b{color:var(--carrot500);font-weight:800;font-variant-numeric:tabular-nums}
@@ -1395,29 +1398,17 @@ function autoNearby(){
 
 /* ── 즐겨찾기(관리) 뷰 ── */
 function renderFavs(){
-  const ovIds = Object.keys(overrides).filter(id => { const p = DATA.find(d=>d.id===id); return p && overrides[id] !== p.grade; });
-  const extRows = EXTRA.length
-    ? EXTRA.map(p => `<div class="fav-row">${rowHTML(p)}<button class="fav-x" data-del="${p.id}" aria-label="${esc(p.name)} 목록에서 빼기">${ic("close")}</button></div>`).join("")
-    : `<div class="fav-note">가게 시트에서 <b>북마크</b>를 누르면 여기에 모여요. 이 기기에만 저장돼요.</div>`;
-  const ovRows = ovIds.length
-    ? ovIds.map(id => {
-        const p = DATA.find(d=>d.id===id);
-        return `<div class="fav-orow"><span class="fav-oname">${esc(p.name)}</span><span class="fav-ov">${GMETA[p.grade].label} → <b>${GMETA[overrides[id]].label}</b></span><button class="fav-x" data-unov="${id}" aria-label="수정 해제">${ic("close")}</button></div>`;
-      }).join("") + `<button class="fav-reset" data-act="ovreset">전체 초기화</button>`
-    : `<div class="fav-note">가게 등급 pill을 탭해 직접 수정하면 여기서 관리할 수 있어요.</div>`;
+  const extIds = new Set(EXTRA.map(p => p.id));
+  const added = EXTRA.slice().reverse(); // 최근 추가 먼저
+  const folder = DATA.filter(p => !extIds.has(p.id)).slice().sort((a,b) => a.name.localeCompare(b.name, "ko"));
+  const rows = added.concat(folder).map(p => extIds.has(p.id)
+    ? `<div class="fav-row">${rowHTML(p)}<button class="fav-x" data-del="${p.id}" aria-label="${esc(p.name)} 즐겨찾기에서 빼기">${ic("close")}</button></div>`
+    : rowHTML(p)).join("");
   document.getElementById("favs").innerHTML = `
-    <section class="fav-sec">
-      <h2>네이버 즐겨찾기 <b>${DATA.length - EXTRA.length}</b></h2>
-      <div class="fav-note">네이버 지도 <b>🦊 폴더</b>와 연결돼 있어요. 폴더를 바꿨다면 <a href="https://claude.ai/code/routines/trig_011mscPQVkciiHTsTDbvAUxa" target="_blank" rel="noopener">데이터 갱신 ↗</a>으로 반영돼요.</div>
-    </section>
-    <section class="fav-sec">
-      <h2>내가 추가한 가게 <b>${EXTRA.length}</b></h2>
-      ${extRows}
-    </section>
-    <section class="fav-sec">
-      <h2>등급 수동 수정 <b>${ovIds.length}</b></h2>
-      ${ovRows}
-    </section>`;
+    <div class="fav-note">네이버 지도 <b>🦊 폴더 ${folder.length}곳</b> + 앱에서 추가한 <b>${added.length}곳</b>.
+    새 가게는 검색·지도의 <b>북마크</b>로 추가해요. 폴더 가게는 네이버 지도에서 관리한 뒤
+    <a href="https://claude.ai/code/routines/trig_011mscPQVkciiHTsTDbvAUxa" target="_blank" rel="noopener">데이터 갱신 ↗</a>하면 반영돼요.</div>
+    <div class="fav-list">${rows}</div>`;
 }
 function removeExtra(id){
   EXTRA = EXTRA.filter(p => p.id !== id);
@@ -1451,6 +1442,9 @@ function setView(){
   document.getElementById("list").hidden = curView!=="home";
   document.getElementById("footwrap").hidden = curView!=="home";
   document.getElementById("favs").hidden = curView!=="favs";
+  // 즐겨찾기 탭은 검색·등급 필터가 없는 단순 리스트 (Ken)
+  document.querySelector(".qwrap").hidden = curView==="favs";
+  document.getElementById("tabs").hidden = curView==="favs";
   store.setItem("pm-view", curView);
   if(curView==="favs"){ renderFavs(); return; }
   if(curView==="map"){
