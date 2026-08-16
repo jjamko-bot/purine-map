@@ -209,32 +209,6 @@ body.mapon #list, body.mapon #footwrap{display:none}
 /* 지도 도구는 fixed — 인앱 브라우저(카톡 등)에서 100dvh가 과대 계산돼 mapbox 하단이
    화면 밖으로 밀려도, FAB처럼 실제 보이는 뷰포트 기준으로 붙는다 */
 .maptools{position:fixed;right:12px;bottom:calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;z-index:20}
-.scanwrap{
-  position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;
-  display:flex;align-items:center;
-}
-.scanbtn{
-  height:38px;padding:0 16px;border:0;border-radius:999px;background:#ffffff;color:#26282b;
-  font-family:inherit;font-size:0.8125rem;font-weight:700;cursor:pointer;white-space:nowrap;
-  box-shadow:0 2px 10px rgba(0,0,0,.22);
-}
-.scanbtn:disabled{opacity:.6}
-.scanbtn:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px}
-/* 판정 결과 pill — 지도 오버레이라 앱 테마 무시, 고정 라이트 팔레트 (v8.10 원칙) */
-.scanres{display:flex;align-items:center;height:38px;border-radius:999px;background:#ffffff;box-shadow:0 2px 10px rgba(0,0,0,.22)}
-.scanres[hidden]{display:none}
-.sr-seg{
-  height:38px;padding:0 11px;border:0;background:transparent;color:#26282b;font-family:inherit;cursor:pointer;
-  display:flex;align-items:center;font-size:0.8125rem;font-weight:700;
-}
-.sr-seg + .sr-seg{border-left:1px solid #eaebee}
-.sr-seg:first-child{border-radius:999px 0 0 999px;padding-left:14px}
-.sr-seg:last-child{border-radius:0 999px 999px 0;padding-right:14px}
-.sr-seg:focus-visible{outline:2px solid var(--carrot500);outline-offset:-2px}
-.sr-seg .ic{width:15px;height:15px}
-.sr-sum{gap:8px}
-.sr-pair{display:flex;align-items:center;gap:4px}
-.sr-dot{width:8px;height:8px;border-radius:50%;flex:none}
 .mbtn{
   width:40px;height:40px;border-radius:10px;border:1px solid var(--gray300);background:var(--gray00);color:var(--gray900);
   font-family:inherit;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.1);
@@ -346,14 +320,6 @@ body.mapon #list, body.mapon #footwrap{display:none}
     <div id="lmap" hidden></div>
     <canvas id="mapcv"></canvas>
     <div class="hoods" id="hoods"></div>
-    <div class="scanwrap">
-      <button class="scanbtn" id="scanbtn">이 주변 판정</button>
-      <div class="scanres" id="scanres" hidden>
-        <button class="sr-seg" id="scanre" aria-label="이 위치에서 다시 판정"></button>
-        <button class="sr-seg sr-sum" id="scanfit" aria-label="판정 결과 요약"></button>
-        <button class="sr-seg" id="scanclear" aria-label="판정 결과 지우기"></button>
-      </div>
-    </div>
     <div class="maptools">
       <button class="mbtn" id="zin" aria-label="확대"></button>
       <button class="mbtn" id="zout" aria-label="축소"></button>
@@ -711,7 +677,7 @@ let extPlace = null;  // 현재 열린 외부(네이버 검색) 가게
 function extSheetHTML(p){
   const m = GMETA[p.grade];
   const menuSec = p.m === null
-    ? `<div class="s-menus"><button class="s-btn" data-act="extmenus">${ic("restaurant")} 메뉴 불러와서 판정</button></div>`
+    ? `<div class="s-menus"><button class="s-btn" data-act="extmenus">${ic("restaurant")} 이 가게 메뉴 분석하기</button></div>`
     : (p.m.length
       ? `<div class="s-menus"><div class="s-label">메뉴 <b>${p.m.length}</b> <span class="s-weak">안전한 순</span></div>` +
         p.m.slice().sort((x,y) => MORDER[x.g]-MORDER[y.g]).map(mn => {
@@ -1163,6 +1129,7 @@ function initNaver(){
     const c = NMAP.getCenter();
     try{ store.setItem("pm-ncam", JSON.stringify({lat:c.lat(), lng:c.lng(), z:NMAP.getZoom()})); }catch(e){}
     if(NMAP.getZoom() >= 13) nRefresh();
+    autoNearby();
   });
   const boot = (tries) => {
     if(!NMAP || !window.naver || !naver.maps) return; // authFailure로 SDK가 내려간 뒤 타이머가 도는 경우
@@ -1209,6 +1176,7 @@ function nRefresh(){
     nMarkers.push(mk);
   }
   for(const p of nearby){
+    if(DATA.some(d => d.id === p.id)) continue; // 내 목록에 추가된 곳은 꽉 찬 점으로만
     const g = gradePlaceCat(p.cat).grade;
     const mk = new naver.maps.Marker({
       position: new naver.maps.LatLng(p.y, p.x), map: NMAP, title: p.name,
@@ -1263,6 +1231,7 @@ function initLeaflet(){
         const c = LMAP.getCenter();
         try{ store.setItem("pm-lcam", JSON.stringify({lat:c.lat, lng:c.lng, z:LMAP.getZoom()})); }catch(e){}
         if(LMAP.getZoom() >= 13) lRefresh();
+        autoNearby();
       });
       lRefresh();
       autoLocate();
@@ -1299,6 +1268,7 @@ function lRefresh(){
     mk.addTo(lLayer);
   }
   for(const p of nearby){
+    if(DATA.some(d => d.id === p.id)) continue; // 내 목록에 추가된 곳은 꽉 찬 점으로만
     const g = gradePlaceCat(p.cat).grade;
     const mk = L.circleMarker([p.y, p.x], {radius:6.5, color:GC[g], weight:3, fillColor:"#ffffff", fillOpacity:1});
     mk.bindTooltip(p.name, {direction:"top", offset:[0,-8], opacity:0.95});
@@ -1307,49 +1277,43 @@ function lRefresh(){
   }
 }
 
-/* ── 이 주변 판정 ── */
-// 결과 피드백은 토스트 대신 상태 pill(scanres): ↻ 재판정 · 등급별 카운트(탭=범위 fit) · ✕ 지우기
-const scanBtn = document.getElementById("scanbtn"), scanRes = document.getElementById("scanres"), scanSum = document.getElementById("scanfit");
-document.getElementById("scanre").innerHTML = ic("retry");
-document.getElementById("scanclear").innerHTML = ic("close");
-function scanShow(state){ // "idle" | "loading" | "res"
-  scanBtn.hidden = state === "res";
-  scanRes.hidden = state !== "res";
-  scanBtn.disabled = state === "loading";
-  scanBtn.textContent = state === "loading" ? "판정 중…" : "이 주변 판정";
+/* ── 주변 음식점 자동 로드 — 지도에 보이는 가게를 항상 탭 가능하게 ── */
+// 줌 14+에서 지도가 멈추면 중심 기준 50곳을 자동으로 불러와 링 마커로 누적.
+// 링 탭 → 시트 → "이 가게 메뉴 분석하기". ~110m 그리드 캐시로 같은 자리 재호출 방지.
+const NB_ZOOM = 14, NB_CAP = 250;
+const nbSeen = new Map(), nbFetched = new Set();
+let nbTimer = null;
+function mapCam(){
+  if(NMAP){ const c = NMAP.getCenter(); return {lat:c.lat(), lng:c.lng(), z:NMAP.getZoom()}; }
+  if(LMAP){ const c = LMAP.getCenter(); return {lat:c.lat, lng:c.lng, z:LMAP.getZoom()}; }
+  return null;
 }
-function runScan(){
-  let lat = null, lng = null;
-  if(NMAP){ const ct = NMAP.getCenter(); lat = ct.lat(); lng = ct.lng(); }
-  else if(LMAP){ const ct = LMAP.getCenter(); lat = ct.lat; lng = ct.lng; }
-  else return toast("이 환경에서는 주변 판정을 쓸 수 없어요");
-  scanShow("loading");
-  fetch(`${API_BASE}/api/search?q=${encodeURIComponent("음식점")}&c=${lat.toFixed(5)},${lng.toFixed(5)}&n=30`)
-    .then(r => r.ok ? r.json() : Promise.reject())
-    .then(j => {
-      nearby = (j.places||[]).filter(p => !DATA.some(d => d.id === p.id) && !RULES.EXCLUDE_CAT.includes(p.cat));
-      drawMap();
-      if(!nearby.length){ scanShow("idle"); toast("이 주변엔 새로 판정할 곳이 없어요"); return; }
-      const cnt = {"하":0,"중":0,"상":0,"미":0};
-      for(const p of nearby) cnt[gradePlaceCat(p.cat).grade]++;
-      const COL = {"하":"#128c6e","중":"#a66c21","상":"#fa2314","미":"#adb1ba"};
-      const LBL = {"하":"안전","중":"보통","상":"주의","미":"분석 불가"};
-      const gs = ["하","중","상","미"].filter(g => cnt[g]);
-      scanSum.innerHTML = gs.map(g => `<span class="sr-pair"><span class="sr-dot" style="background:${COL[g]}"></span>${cnt[g]}</span>`).join("");
-      scanSum.setAttribute("aria-label", `주변 ${nearby.length}곳 — ` + gs.map(g => `${LBL[g]} ${cnt[g]}곳`).join(", ") + " (탭하면 결과 범위 보기)");
-      scanShow("res");
-    })
-    .catch(() => { scanShow(nearby.length ? "res" : "idle"); toast("주변 판정에 실패했어요 — 잠시 후 다시"); });
+function autoNearby(){
+  const cam = mapCam();
+  if(!cam) return;
+  if(cam.z < NB_ZOOM){ if(nearby.length){ nearby = []; drawMap(); } return; }
+  if(!nearby.length && nbSeen.size){ nearby = [...nbSeen.values()]; drawMap(); }
+  const key = cam.lat.toFixed(3) + "," + cam.lng.toFixed(3);
+  if(nbFetched.has(key)) return;
+  clearTimeout(nbTimer);
+  nbTimer = setTimeout(() => {
+    const now = mapCam();
+    if(!now || now.z < NB_ZOOM) return;
+    nbFetched.add(key);
+    fetch(`${API_BASE}/api/search?q=${encodeURIComponent("음식점")}&c=${cam.lat.toFixed(5)},${cam.lng.toFixed(5)}&n=50`)
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(j => {
+        for(const p of j.places||[]){
+          if(DATA.some(d => d.id === p.id) || RULES.EXCLUDE_CAT.includes(p.cat)) continue;
+          nbSeen.delete(p.id); nbSeen.set(p.id, p);
+        }
+        while(nbSeen.size > NB_CAP) nbSeen.delete(nbSeen.keys().next().value);
+        nearby = [...nbSeen.values()];
+        drawMap();
+      })
+      .catch(() => nbFetched.delete(key)); // 실패 시 다음 idle에 재시도
+  }, 600);
 }
-scanBtn.addEventListener("click", runScan);
-document.getElementById("scanre").addEventListener("click", runScan);
-document.getElementById("scanclear").addEventListener("click", () => { nearby = []; drawMap(); scanShow("idle"); });
-scanSum.addEventListener("click", () => {
-  const pts = nearby.filter(p => p.x);
-  if(!pts.length) return;
-  if(NMAP) nvFit(pts);
-  else if(LMAP) lFit(pts);
-});
 
 /* ── 뷰 전환 ── */
 function setView(){
