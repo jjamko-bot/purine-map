@@ -35,15 +35,17 @@
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
-html{-webkit-text-size-adjust:100%;overflow-x:hidden}
-body{overflow-x:hidden}
+/* 앱 셸: 최대 640px 중앙 컬럼 (웹뷰·모바일은 그대로, 태블릿·데스크톱은 프레임) */
+html{-webkit-text-size-adjust:100%;overflow-x:hidden;background:var(--gray50)}
+body{overflow-x:hidden;max-width:640px;margin:0 auto}
 body{
   background:var(--gray00); color:var(--gray900);
   font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
   line-height:1.5; padding-bottom:calc(88px + env(safe-area-inset-bottom));
 }
 .bnav{
-  position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;
+  position:fixed;left:50%;transform:translateX(-50%);bottom:0;z-index:30;display:flex;
+  width:100%;max-width:640px;
   background:var(--gray00);border-top:1px solid var(--gray100);
   padding-bottom:env(safe-area-inset-bottom);
 }
@@ -58,7 +60,7 @@ body{
 body.favson .logo, body.favson .head-count{display:none}
 body.favson > header{border-bottom:0}
 body.locked{overflow:hidden}
-.wrap{max-width:520px;margin:0 auto;padding:0 16px}
+.wrap{max-width:640px;margin:0 auto;padding:0 16px}
 
 /* ── seed icons ── */
 .ic{width:16px;height:16px;flex-shrink:0;vertical-align:-3px}
@@ -197,7 +199,7 @@ body:not(.mapon) .qwrap{padding-bottom:10px}
 #mapwrap{display:none}
 body.mapon{height:100dvh;overflow:hidden;padding-bottom:0;display:flex;flex-direction:column}
 body.mapon > header{
-  position:fixed;top:0;left:0;right:0;z-index:25;flex:none;
+  position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:640px;z-index:25;flex:none;
   background:none;border-bottom:0;pointer-events:none;
   padding-top:env(safe-area-inset-top);
 }
@@ -248,7 +250,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 #lmap .star-mk{background:none;border:0}
 /* 지도 도구는 fixed — 인앱 브라우저(카톡 등)에서 100dvh가 과대 계산돼 mapbox 하단이
    화면 밖으로 밀려도, FAB처럼 실제 보이는 뷰포트 기준으로 붙는다 */
-.maptools{position:fixed;right:12px;bottom:calc(74px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;z-index:20}
+.maptools{position:fixed;right:max(12px, calc(50vw - 308px));bottom:calc(74px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;z-index:20}
 .mbtn{
   width:40px;height:40px;border-radius:10px;border:1px solid var(--gray300);background:var(--gray00);color:var(--gray900);
   font-family:inherit;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.1);
@@ -271,7 +273,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 .dim{position:fixed;inset:0;background:var(--dim);z-index:40;opacity:0}
 .dim.on{opacity:1}
 .sheet{
-  position:fixed;left:50%;bottom:0;transform:translate(-50%,104%);width:100%;max-width:520px;z-index:50;
+  position:fixed;left:50%;bottom:0;transform:translate(-50%,104%);width:100%;max-width:640px;z-index:50;
   background:var(--gray00);border-radius:20px 20px 0 0;box-shadow:0 -8px 32px rgba(0,0,0,.18);
   max-height:86dvh;display:flex;flex-direction:column;overflow:hidden;
 }
@@ -339,7 +341,10 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 .mnote{font-size:0.6875rem;color:var(--gray500);padding:8px 0 2px}
 
 /* ── 검색 페이지 ── */
-.spage{position:fixed;inset:0;z-index:34;background:var(--gray00);display:flex;flex-direction:column;overflow:hidden}
+.spage{
+  position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:640px;
+  z-index:34;background:var(--gray00);display:flex;flex-direction:column;overflow:hidden;
+}
 .spage[hidden]{display:none}
 .spage-head{
   flex:none;display:flex;align-items:center;gap:2px;
@@ -348,7 +353,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 .sp-back{width:40px;height:40px;flex-shrink:0;border:0;border-radius:50%;background:none;color:var(--gray900);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .sp-back .ic{width:22px;height:22px}
 .sp-qwrap{flex:1;padding-bottom:0 !important}
-.spage-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:6px 16px calc(24px + env(safe-area-inset-bottom));width:100%;max-width:520px;margin:0 auto}
+.spage-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:6px 16px calc(24px + env(safe-area-inset-bottom));width:100%}
 .sp-sec{margin-bottom:26px}
 .sp-label{display:flex;align-items:center;gap:4px;font-size:0.9375rem;font-weight:800;margin:14px 0 6px}
 .sp-label b{color:var(--carrot500);font-variant-numeric:tabular-nums}
@@ -1785,6 +1790,14 @@ window.addEventListener("resize", ()=>{ if(curView==="map"){ sizeCanvas(); drawM
 if(window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>{ if(curView==="map") drawMap(); });
 
 /* ── 초기화 ── */
+// iOS 웹뷰: 키보드가 열리며 뷰포트를 밀어올린 뒤, 닫혀도 오프셋이 남아
+// fixed 하단 요소(네비·지도 도구)가 화면 밖에 남는 문제 — 키보드 닫힘 시 복원
+document.getElementById("q").addEventListener("blur", () => setTimeout(() => window.scrollTo(0, 0), 60));
+if(window.visualViewport){
+  window.visualViewport.addEventListener("resize", () => {
+    if(window.visualViewport.height >= window.innerHeight - 60) window.scrollTo(0, 0);
+  });
+}
 document.getElementById("qClear").innerHTML = ic("close");
 document.getElementById("qBtn").innerHTML = ic("search");
 document.getElementById("qBtn").addEventListener("click", openSearchPage);
