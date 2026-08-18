@@ -226,6 +226,16 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
   display:flex;gap:6px;overflow:visible;padding:2px 12px;
   pointer-events:none;
 }
+.nearbtn{
+  position:absolute;top:calc(112px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:20;
+  height:36px;padding:0 14px;border:0;border-radius:999px;cursor:pointer;
+  background:var(--gray00);color:var(--carrot500);font-family:inherit;font-size:0.8125rem;font-weight:700;
+  display:flex;align-items:center;gap:6px;box-shadow:0 4px 14px rgba(0,0,0,.22), 0 1px 3px rgba(0,0,0,.14);
+}
+.nearbtn[hidden]{display:none}
+.nearbtn:disabled{color:var(--gray500)}
+.nearbtn .nb-ic{display:flex}
+.nearbtn .nb-ic .ic{width:15px;height:15px}
 /* 지도 위 칩은 지도 밝기(항상 라이트 타일) 기준 고정 팔레트 — 앱 테마와 무관 */
 .hood{
   pointer-events:auto;flex-shrink:0;height:34px;padding:0 13px;border:0;border-radius:999px;
@@ -311,9 +321,6 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 .s-name{font-size:1.125rem;font-weight:800;letter-spacing:-.01em;line-height:1.3}
 .s-sub{font-size:0.8125rem;color:var(--gray600);margin-top:2px}
 .s-addr{font-size:0.75rem;color:var(--gray500);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.s-close{border:0;background:none;color:var(--gray500);cursor:pointer;padding:2px;flex-shrink:0}
-.s-close .ic{width:17px;height:17px}
-.s-close:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px;border-radius:4px}
 .s-caution{
   margin-top:14px;border:1px dashed var(--red600);color:var(--red700);
   font-size:0.75rem;font-weight:600;padding:8px 12px;border-radius:10px;
@@ -469,6 +476,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
     <div id="lmap" hidden></div>
     <canvas id="mapcv"></canvas>
     <div class="hoods" id="hoods"></div>
+    <button class="nearbtn" id="nearBtn" hidden><span class="nb-ic" id="nearBtnIc"></span><span id="nearBtnLb">이 지역에서 검색</span></button>
     <div class="maptools">
       <button class="mbtn" id="zin" aria-label="확대"></button>
       <button class="mbtn" id="zout" aria-label="축소"></button>
@@ -850,7 +858,6 @@ function sheetHTML(p){
         <div class="s-addr">${esc(p.addr)}</div>
       </div>
       <span class="gpill s-gpill" style="--gcol:${m.col};--gsoft:${m.soft}">${m.label}</span>
-      <button class="s-close" data-act="close" aria-label="닫기">${ic("close")}</button>
     </header>
     ${p.caution?`<div class="s-caution">⚠ ${esc(p.caution)}</div>`:""}
 
@@ -917,7 +924,6 @@ function extSheetHTML(p){
         <div class="s-addr">${esc(p.addr)}</div>
       </div>
       <span class="gpill s-gpill" style="--gcol:${m.col};--gsoft:${m.soft}">${m.label}</span>
-      <button class="s-close" data-act="close" aria-label="닫기">${ic("close")}</button>
     </header>
     ${p.caution?`<div class="s-caution">⚠ ${esc(p.caution)}</div>`:""}
 
@@ -1409,7 +1415,7 @@ function initNaver(){
     const c = NMAP.getCenter();
     try{ store.setItem("pm-ncam", JSON.stringify({lat:c.lat(), lng:c.lng(), z:NMAP.getZoom()})); }catch(e){}
     if(NMAP.getZoom() >= 13) nRefresh();
-    autoNearby();
+    nbIdle();
   });
   const boot = (tries) => {
     if(!NMAP || !window.naver || !naver.maps) return; // authFailure로 SDK가 내려간 뒤 타이머가 도는 경우
@@ -1418,6 +1424,7 @@ function initNaver(){
     if(userLoc){ NMAP.setCenter(new naver.maps.LatLng(userLoc.y, userLoc.x)); NMAP.setZoom(14, false); } // 내 위치 우선 (v8.3 의도 복원)
     else if(!cam) nvFit(mapPlaces());
     nRefresh();
+    setTimeout(nRefresh, 600); // setCenter/setZoom 직후 bounds가 아직 안 따라온 경우 컬링 보정
     autoLocate();
   };
   setTimeout(()=>boot(0), 120);
@@ -1536,7 +1543,7 @@ function initLeaflet(){
         const c = LMAP.getCenter();
         try{ store.setItem("pm-lcam", JSON.stringify({lat:c.lat, lng:c.lng, z:LMAP.getZoom()})); }catch(e){}
         if(LMAP.getZoom() >= 13) lRefresh();
-        autoNearby();
+        nbIdle();
       });
       lRefresh();
       autoLocate();
@@ -1621,31 +1628,43 @@ function mapCam(){
   if(LMAP){ const c = LMAP.getCenter(); return {lat:c.lat, lng:c.lng, z:LMAP.getZoom()}; }
   return null;
 }
-function autoNearby(){
+function gridKey(cam){ return cam.lat.toFixed(3) + "," + cam.lng.toFixed(3); }
+function nbIdle(){
+  // 지도가 멈출 때: 줌 게이트·캐시 복원·버튼 노출만 판단. fetch는 버튼 탭으로만 (v19.4, Ken 제안 — 네이버 "현 지도에서 검색" 패턴)
   const cam = mapCam();
-  if(!cam) return;
-  if(cam.z < NB_ZOOM){ if(nearby.length){ nearby = []; drawMap(); } return; }
+  const btn = document.getElementById("nearBtn");
+  if(!cam || cam.z < NB_ZOOM){
+    if(nearby.length){ nearby = []; drawMap(); }
+    btn.hidden = true;
+    return;
+  }
   if(!nearby.length && nbSeen.size){ nearby = [...nbSeen.values()]; drawMap(); }
-  const key = cam.lat.toFixed(3) + "," + cam.lng.toFixed(3);
-  if(nbFetched.has(key)) return;
-  clearTimeout(nbTimer);
-  nbTimer = setTimeout(() => {
-    const now = mapCam();
-    if(!now || now.z < NB_ZOOM) return;
-    nbFetched.add(key);
-    fetch(`${API_BASE}/api/search?q=${encodeURIComponent("음식점")}&c=${cam.lat.toFixed(5)},${cam.lng.toFixed(5)}&n=50`)
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then(j => {
-        for(const p of j.places||[]){
-          if(DATA.some(d => d.id === p.id) || RULES.EXCLUDE_CAT.includes(p.cat)) continue;
-          nbSeen.delete(p.id); nbSeen.set(p.id, p);
-        }
-        while(nbSeen.size > NB_CAP) nbSeen.delete(nbSeen.keys().next().value);
-        nearby = [...nbSeen.values()];
-        drawMap();
-      })
-      .catch(() => nbFetched.delete(key)); // 실패 시 다음 idle에 재시도
-  }, 600);
+  btn.hidden = nbFetched.has(gridKey(cam)); // 이미 검색한 격자면 링이 떠 있으니 숨김
+}
+function nbSearchHere(){
+  const cam = mapCam();
+  if(!cam || cam.z < NB_ZOOM) return;
+  const btn = document.getElementById("nearBtn"), lb = document.getElementById("nearBtnLb");
+  btn.disabled = true; lb.textContent = "검색 중…";
+  const done = msg => { btn.disabled = false; lb.textContent = "이 지역에서 검색"; if(msg) toast(msg); };
+  const key = gridKey(cam);
+  fetch(`${API_BASE}/api/search?q=${encodeURIComponent("음식점")}&c=${cam.lat.toFixed(5)},${cam.lng.toFixed(5)}&n=50`)
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(j => {
+      nbFetched.add(key);
+      let added = 0;
+      for(const p of j.places||[]){
+        if(DATA.some(d => d.id === p.id) || RULES.EXCLUDE_CAT.includes(p.cat)) continue;
+        if(!nbSeen.has(p.id)) added++;
+        nbSeen.delete(p.id); nbSeen.set(p.id, p);
+      }
+      while(nbSeen.size > NB_CAP) nbSeen.delete(nbSeen.keys().next().value);
+      nearby = [...nbSeen.values()];
+      drawMap();
+      btn.hidden = true;
+      done(added ? null : "이 지역에서 새로 찾은 음식점이 없어요");
+    })
+    .catch(() => done("검색이 잠시 막혔어요 — 조금 뒤 다시 시도해주세요")); // 429 등 — 버튼 유지, 재시도 가능
 }
 
 
@@ -1848,9 +1867,12 @@ if(window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListene
 // iOS 웹뷰: 키보드가 열리며 뷰포트를 밀어올린 뒤, 닫혀도 오프셋이 남아
 // fixed 하단 요소(네비·지도 도구)가 화면 밖에 남는 문제 — 키보드 닫힘 시 복원
 document.getElementById("q").addEventListener("blur", () => setTimeout(() => window.scrollTo(0, 0), 60));
+// 사파리 URL바 수축/확장도 resize를 쏘므로, 키보드가 실제로 열렸던 경우에만 복원 (스크롤 중 최상단 점프 방지)
+let kbWasOpen = false;
+document.addEventListener("focusin", e => { if(e.target && e.target.tagName === "INPUT") kbWasOpen = true; });
 if(window.visualViewport){
   window.visualViewport.addEventListener("resize", () => {
-    if(window.visualViewport.height >= window.innerHeight - 60) window.scrollTo(0, 0);
+    if(kbWasOpen && window.visualViewport.height >= window.innerHeight - 60){ kbWasOpen = false; window.scrollTo(0, 0); }
   });
 }
 document.getElementById("qClear").innerHTML = ic("close");
@@ -1861,13 +1883,15 @@ document.getElementById("sqClear").innerHTML = ic("close");
 document.getElementById("zin").innerHTML = ic("add");
 document.getElementById("zout").innerHTML = ic("subtraction");
 document.getElementById("locbtn").innerHTML = ic("gps");
+document.getElementById("nearBtn").addEventListener("click", nbSearchHere);
+document.getElementById("nearBtnIc").innerHTML = ic("retry");
 renderHoods();
 setView();
 render();
 autoLocate();  // 거리순 기본 정렬용 — 거부 시 추천순 점수로 폴백
 
 // ── PWA: 서비스워커 + 파비콘 + safe-area 방어 ──
-const APP_VER = "v19.3";
+const APP_VER = "v19.4";
 document.getElementById("ver").textContent = "퓨린 신호등 " + APP_VER;
 
 function toastAction(msg, label, fn){
