@@ -211,10 +211,9 @@ body.mapon #mapwrap{display:block;flex:1;min-height:0;max-width:none;width:100%;
 body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 .hoods{
   position:absolute;top:calc(64px + env(safe-area-inset-top));left:0;right:0;z-index:20;
-  display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 12px;
+  display:flex;gap:6px;overflow:visible;padding:2px 12px;
   pointer-events:none;
 }
-.hoods::-webkit-scrollbar{display:none}
 /* 지도 위 칩은 지도 밝기(항상 라이트 타일) 기준 고정 팔레트 — 앱 테마와 무관 */
 .hood{
   pointer-events:auto;flex-shrink:0;height:34px;padding:0 13px;border:0;border-radius:999px;
