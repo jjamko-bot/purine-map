@@ -1323,7 +1323,7 @@ document.getElementById("locbtn").addEventListener("click", ()=>{
 // 네이버 클라우드 플랫폼 Maps의 Client ID(ncpKeyId). 비워두면 네이버 지도는 건너뛴다.
 // 발급 후 여기에 넣고 빌드하면 활성화. 웹 키는 도메인 제한이라 공개되어도 안전.
 const NAVER_CLIENT_ID = "dton9zv6bt";
-let NMAP = null, nMarkers = [], nUser = null, naverTried = false, naverDead = false;
+let NMAP = null, nMk = new Map(), nUser = null, naverTried = false, naverDead = false;
 const lblCtx = document.createElement("canvas").getContext("2d");
 function declutter(items){
   // items: [{x,y,name,grade,id}] (px) → 라벨 표시할 id Set. 안전 등급 우선.
@@ -1375,7 +1375,7 @@ function tryNaver(){
   window.navermap_authFailure = function(){
     if(naverDead) return;
     naverDead = true;
-    NMAP = null; nMarkers = [];
+    NMAP = null; nMk = new Map();
     const el = document.getElementById("nmap");
     el.classList.remove("on"); el.hidden = true;  // 네이버 잔해는 숨긴 컨테이너에 격리
     tryLeaflet();
@@ -1433,46 +1433,64 @@ function nRefresh(){
   if(!NMAP) return;
   const GC = {"하":cssv("--green600"),"중":cssv("--yellow600"),"상":cssv("--red600"),"미":cssv("--gray500")};
   const showLbl = NMAP.getZoom() >= 13;  // 동네 수준부터 가게명 표시 (네이버지도 스타일)
-  nMarkers.forEach(m => m.setMap(null)); nMarkers = [];
+  // 뷰포트 컬링: 화면 + 사방 1화면 여유만 마커 생성 — 보이는 결과는 동일, 화면 밖 DOM 수백 개 절약
+  let inBB = () => true;
+  const bb = NMAP.getBounds();
+  // 컨테이너 크기 0 등으로 bounds가 점으로 붕괴하면 컬링을 끈다 (전부 걸러지는 사고 방지)
+  if(bb && bb.getNE().lat() > bb.getSW().lat() && bb.getNE().lng() > bb.getSW().lng()){
+    const sw = bb.getSW(), ne = bb.getNE();
+    const dy = ne.lat()-sw.lat(), dx = ne.lng()-sw.lng();
+    const minY = sw.lat()-dy, maxY = ne.lat()+dy, minX = sw.lng()-dx, maxX = ne.lng()+dx;
+    inBB = p => p.y >= minY && p.y <= maxY && p.x >= minX && p.x <= maxX;
+  }
+  const favs = mapPlaces().filter(inBB);
+  const rings = ringPlaces().filter(inBB);
   let lblOk = new Set();
   if(showLbl){
     const proj = NMAP.getProjection();
-    const pool = mapPlaces().map(p => {
+    const pt = (p, grade) => {
       const o = proj.fromCoordToOffset(new naver.maps.LatLng(p.y, p.x));
-      return {x:o.x, y:o.y, name:p.name, grade:gradeOf(p), id:p.id};
-    }).concat(ringPlaces().map(p => {
-      const o = proj.fromCoordToOffset(new naver.maps.LatLng(p.y, p.x));
-      return {x:o.x, y:o.y, name:p.name, grade:gradePlaceCat(p.cat).grade, id:p.id};
-    }));
-    lblOk = declutter(pool);
-  }
-  for(const p of mapPlaces()){
-    const g = gradeOf(p);
-    const size = sheetId===p.id ? 24 : 19;
-    const lbl = (showLbl && lblOk.has(p.id)) ? `<div style="position:absolute;top:${size+2}px;left:50%;transform:translateX(-50%);white-space:nowrap;font:600 11px Pretendard,'Pretendard Variable',sans-serif;color:#26282b;text-shadow:0 1px 2px #fff,0 -1px 2px #fff,1px 0 2px #fff,-1px 0 2px #fff">${esc(p.name)}</div>` : "";
-    const mk = new naver.maps.Marker({
-      position: new naver.maps.LatLng(p.y, p.x), map: NMAP, title: p.name,
-      icon: {
-        content: `<div class="nvmk" style="position:relative;width:${size}px;height:${size}px">${starSVG(GC[g], size)}${lbl}</div>`,
-        anchor: new naver.maps.Point(size/2, size/2),
-      },
-    });
-    naver.maps.Event.addListener(mk, "click", () => openSheet(p.id));
-    nMarkers.push(mk);
+      return {x:o.x, y:o.y, name:p.name, grade, id:p.id};
+    };
+    lblOk = declutter(favs.map(p => pt(p, gradeOf(p))).concat(rings.map(p => pt(p, gradePlaceCat(p.cat).grade))));
   }
   const nSearchMode = query.length >= 2 && nvResults;
-  for(const p of ringPlaces()){
+  const halo = "text-shadow:0 1px 2px #fff,0 -1px 2px #fff,1px 0 2px #fff,-1px 0 2px #fff";
+  const want = new Map();
+  for(const p of favs){
+    const g = gradeOf(p);
+    const size = sheetId===p.id ? 24 : 19;
+    const lbl = (showLbl && lblOk.has(p.id)) ? `<div style="position:absolute;top:${size+2}px;left:50%;transform:translateX(-50%);white-space:nowrap;font:600 11px Pretendard,'Pretendard Variable',sans-serif;color:#26282b;${halo}">${esc(p.name)}</div>` : "";
+    want.set(p.id, {p, ext:false, ax:size/2, ay:size/2,
+      content:`<div class="nvmk" style="position:relative;width:${size}px;height:${size}px">${starSVG(GC[g], size)}${lbl}</div>`});
+  }
+  for(const p of rings){
     const g = gradePlaceCat(p.cat).grade;
-    const rlbl = (nSearchMode || (showLbl && lblOk.has(p.id))) ? `<div style="position:absolute;top:16px;left:50%;transform:translateX(-50%);white-space:nowrap;font:600 11px Pretendard,'Pretendard Variable',sans-serif;color:#26282b;text-shadow:0 1px 2px #fff,0 -1px 2px #fff,1px 0 2px #fff,-1px 0 2px #fff">${esc(p.name)}</div>` : "";
-    const mk = new naver.maps.Marker({
-      position: new naver.maps.LatLng(p.y, p.x), map: NMAP, title: p.name,
-      icon: {
-        content: `<div class="nvmk" style="position:relative;width:14px;height:14px"><div style="width:14px;height:14px;border-radius:50%;background:#fff;border:3.5px solid ${GC[g]};box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>${rlbl}</div>`,
-        anchor: new naver.maps.Point(7, 7),
-      },
-    });
-    naver.maps.Event.addListener(mk, "click", () => openExtSheet(p));
-    nMarkers.push(mk);
+    const rlbl = (nSearchMode || (showLbl && lblOk.has(p.id))) ? `<div style="position:absolute;top:16px;left:50%;transform:translateX(-50%);white-space:nowrap;font:600 11px Pretendard,'Pretendard Variable',sans-serif;color:#26282b;${halo}">${esc(p.name)}</div>` : "";
+    want.set(p.id, {p, ext:true, ax:7, ay:7,
+      content:`<div class="nvmk" style="position:relative;width:14px;height:14px"><div style="width:14px;height:14px;border-radius:50%;background:#fff;border:3.5px solid ${GC[g]};box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>${rlbl}</div>`});
+  }
+  // 차분 업데이트: 나간 것만 제거·새 것만 생성·바뀐 것만 아이콘 교체 — 전체 재생성이 드래그 히치의 주범이었음
+  for(const [id, cur] of nMk){
+    if(!want.has(id)){ cur.mk.setMap(null); nMk.delete(id); }
+  }
+  for(const [id, w] of want){
+    let cur = nMk.get(id);
+    if(cur && cur.ext !== w.ext){ cur.mk.setMap(null); nMk.delete(id); cur = null; } // 링→별 전환 등 종류 변경은 재생성 (클릭 핸들러 교체)
+    if(cur){
+      if(cur.sig !== w.content){
+        cur.mk.setIcon({content:w.content, anchor:new naver.maps.Point(w.ax, w.ay)});
+        cur.sig = w.content;
+      }
+    }else{
+      const mk = new naver.maps.Marker({
+        position: new naver.maps.LatLng(w.p.y, w.p.x), map: NMAP, title: w.p.name,
+        icon: {content:w.content, anchor:new naver.maps.Point(w.ax, w.ay)},
+      });
+      const pp = w.p, ext = w.ext;
+      naver.maps.Event.addListener(mk, "click", () => ext ? openExtSheet(pp) : openSheet(pp.id));
+      nMk.set(id, {mk, sig:w.content, ext});
+    }
   }
 }
 
@@ -1532,39 +1550,63 @@ function lFit(pts){
   const b = L.latLngBounds(pts.map(p=>[p.y, p.x]));
   LMAP.fitBounds(b, {padding:[36,36], maxZoom:16});
 }
+let lMk = new Map();
 function lRefresh(){
   if(!LMAP || !lLayer) return;
   const GC = {"하":cssv("--green600"),"중":cssv("--yellow600"),"상":cssv("--red600"),"미":cssv("--gray500")};
-  lLayer.clearLayers();
   const showLbl = LMAP.getZoom() >= 13;
+  // 뷰포트 컬링 + 차분 업데이트 (nRefresh와 동일한 이유)
+  let inBB = () => true;
+  // 컨테이너 크기 0이면 bounds가 점으로 붕괴 → 컬링 비활성 (전부 걸러지는 사고 방지)
+  try{
+    const sz = LMAP.getSize(), b = LMAP.getBounds();
+    if(sz.x > 0 && sz.y > 0 && b.getEast() > b.getWest()){
+      const pad = b.pad(1.0);
+      inBB = p => pad.contains([p.y, p.x]);
+    }
+  }catch(e){}
+  const favs = mapPlaces().filter(inBB);
+  const rings = ringPlaces().filter(inBB);
   let lblOk = new Set();
   if(showLbl){
-    const pool = mapPlaces().map(p => {
+    const pt = (p, grade) => {
       const o = LMAP.latLngToContainerPoint([p.y, p.x]);
-      return {x:o.x, y:o.y, name:p.name, grade:gradeOf(p), id:p.id};
-    }).concat(ringPlaces().map(p => {
-      const o = LMAP.latLngToContainerPoint([p.y, p.x]);
-      return {x:o.x, y:o.y, name:p.name, grade:gradePlaceCat(p.cat).grade, id:p.id};
-    }));
-    lblOk = declutter(pool);
-  }
-  for(const p of mapPlaces()){
-    const g = gradeOf(p);
-    const size = sheetId===p.id ? 24 : 19;
-    const mk = L.marker([p.y, p.x], {icon: L.divIcon({className:"star-mk", html: starSVG(GC[g], size), iconSize:[size,size], iconAnchor:[size/2,size/2]})});
-    if(showLbl && lblOk.has(p.id)) mk.bindTooltip(p.name, {permanent:true, direction:"bottom", offset:[0,size/2+2], className:"plabel"});
-    else mk.bindTooltip(p.name, {direction:"top", offset:[0,-(size/2+2)], opacity:0.95});
-    mk.on("click", () => openSheet(p.id));
-    mk.addTo(lLayer);
+      return {x:o.x, y:o.y, name:p.name, grade, id:p.id};
+    };
+    lblOk = declutter(favs.map(p => pt(p, gradeOf(p))).concat(rings.map(p => pt(p, gradePlaceCat(p.cat).grade))));
   }
   const searchMode = query.length >= 2 && nvResults;
-  for(const p of ringPlaces()){
+  const want = new Map();
+  for(const p of favs){
+    const g = gradeOf(p);
+    const size = sheetId===p.id ? 24 : 19;
+    want.set(p.id, {p, ext:false, sig:`s|${g}|${size}|${showLbl && lblOk.has(p.id) ? 1 : 0}`, g, size, lbl:showLbl && lblOk.has(p.id)});
+  }
+  for(const p of rings){
     const g = gradePlaceCat(p.cat).grade;
-    const mk = L.circleMarker([p.y, p.x], {radius:6.5, color:GC[g], weight:3, fillColor:"#ffffff", fillOpacity:1});
-    if(searchMode || (showLbl && lblOk.has(p.id))) mk.bindTooltip(p.name, {permanent:true, direction:"bottom", offset:[0,8], className:"plabel"});
-    else mk.bindTooltip(p.name, {direction:"top", offset:[0,-8], opacity:0.95});
-    mk.on("click", () => openExtSheet(p));
+    want.set(p.id, {p, ext:true, sig:`r|${g}|${searchMode || (showLbl && lblOk.has(p.id)) ? 1 : 0}`, g, lbl:searchMode || (showLbl && lblOk.has(p.id))});
+  }
+  for(const [id, cur] of lMk){
+    if(!want.has(id) || want.get(id).sig !== cur.sig){ lLayer.removeLayer(cur.mk); lMk.delete(id); }
+  }
+  for(const [id, w] of want){
+    if(lMk.has(id)) continue;
+    let mk;
+    if(!w.ext){
+      mk = L.marker([w.p.y, w.p.x], {icon: L.divIcon({className:"star-mk", html: starSVG(GC[w.g], w.size), iconSize:[w.size,w.size], iconAnchor:[w.size/2,w.size/2]})});
+      if(w.lbl) mk.bindTooltip(w.p.name, {permanent:true, direction:"bottom", offset:[0,w.size/2+2], className:"plabel"});
+      else mk.bindTooltip(w.p.name, {direction:"top", offset:[0,-(w.size/2+2)], opacity:0.95});
+      const pid = w.p.id;
+      mk.on("click", () => openSheet(pid));
+    }else{
+      mk = L.circleMarker([w.p.y, w.p.x], {radius:6.5, color:GC[w.g], weight:3, fillColor:"#ffffff", fillOpacity:1});
+      if(w.lbl) mk.bindTooltip(w.p.name, {permanent:true, direction:"bottom", offset:[0,8], className:"plabel"});
+      else mk.bindTooltip(w.p.name, {direction:"top", offset:[0,-8], opacity:0.95});
+      const pp = w.p;
+      mk.on("click", () => openExtSheet(pp));
+    }
     mk.addTo(lLayer);
+    lMk.set(id, {mk, sig:w.sig});
   }
 }
 
@@ -1825,7 +1867,7 @@ render();
 autoLocate();  // 거리순 기본 정렬용 — 거부 시 추천순 점수로 폴백
 
 // ── PWA: 서비스워커 + 파비콘 + safe-area 방어 ──
-const APP_VER = "v19.2";
+const APP_VER = "v19.3";
 document.getElementById("ver").textContent = "퓨린 신호등 " + APP_VER;
 
 function toastAction(msg, label, fn){
