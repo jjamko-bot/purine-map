@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>퓨린 신호등</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -76,7 +76,8 @@ body.locked{overflow:hidden}
 .ic{width:16px;height:16px;flex-shrink:0;vertical-align:-3px}
 
 /* ── header ── */
-body > header{position:sticky;top:0;z-index:10;background:var(--gray00);border-bottom:1px solid var(--gray100)}
+/* viewport-fit=cover라 standalone에서 콘텐츠가 상태바 아래로 확장될 수 있음 — 브라우저에선 env=0 */
+body > header{position:sticky;top:0;z-index:10;background:var(--gray00);border-bottom:1px solid var(--gray100);padding-top:env(safe-area-inset-top)}
 .head-top{display:flex;align-items:center;gap:8px;padding:16px 0 12px}
 h1{font-size:1.25rem;font-weight:800;letter-spacing:-.02em}
 .logo{width:26px;height:18px;flex-shrink:0}
