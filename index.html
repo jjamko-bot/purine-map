@@ -1628,6 +1628,24 @@ function mapCam(){
   if(LMAP){ const c = LMAP.getCenter(); return {lat:c.lat, lng:c.lng, z:LMAP.getZoom()}; }
   return null;
 }
+function mapBounds(){
+  // 현재 보이는 지도 범위 {minY,maxY,minX,maxX}. 컨테이너 0 등 degenerate면 null
+  try{
+    if(NMAP){
+      const b = NMAP.getBounds();
+      if(b && b.getNE().lat() > b.getSW().lat() && b.getNE().lng() > b.getSW().lng())
+        return {minY:b.getSW().lat(), maxY:b.getNE().lat(), minX:b.getSW().lng(), maxX:b.getNE().lng()};
+      return null;
+    }
+    if(LMAP){
+      const sz = LMAP.getSize(), b = LMAP.getBounds();
+      if(sz.x > 0 && sz.y > 0 && b.getEast() > b.getWest())
+        return {minY:b.getSouth(), maxY:b.getNorth(), minX:b.getWest(), maxX:b.getEast()};
+      return null;
+    }
+  }catch(e){}
+  return null;
+}
 function gridKey(cam){ return cam.lat.toFixed(3) + "," + cam.lng.toFixed(3); }
 function nbIdle(){
   // 지도가 멈출 때: 줌 게이트·캐시 복원·버튼 노출만 판단. fetch는 버튼 탭으로만 (v19.4, Ken 제안 — 네이버 "현 지도에서 검색" 패턴)
@@ -1648,23 +1666,36 @@ function nbSearchHere(){
   btn.disabled = true; lb.textContent = "검색 중…";
   const done = msg => { btn.disabled = false; lb.textContent = "이 지역에서 검색"; if(msg) toast(msg); };
   const key = gridKey(cam);
-  fetch(`${API_BASE}/api/search?q=${encodeURIComponent("음식점")}&c=${cam.lat.toFixed(5)},${cam.lng.toFixed(5)}&n=50`)
-    .then(r => r.ok ? r.json() : Promise.reject())
-    .then(j => {
-      nbFetched.add(key);
-      let added = 0;
-      for(const p of j.places||[]){
-        if(DATA.some(d => d.id === p.id) || RULES.EXCLUDE_CAT.includes(p.cat)) continue;
-        if(!nbSeen.has(p.id)) added++;
-        nbSeen.delete(p.id); nbSeen.set(p.id, p);
-      }
-      while(nbSeen.size > NB_CAP) nbSeen.delete(nbSeen.keys().next().value);
-      nearby = [...nbSeen.values()];
-      drawMap();
-      btn.hidden = true;
-      done(added ? null : "이 지역에서 새로 찾은 음식점이 없어요");
-    })
-    .catch(() => done("검색이 잠시 막혔어요 — 조금 뒤 다시 시도해주세요")); // 429 등 — 버튼 유지, 재시도 가능
+  // 뷰포트 4분할 + 중심 5곳 검색 — 고줌에서 네이버 검색 결과가 화면 밖 1~2km에 흩어져
+  // "눌러도 변화 없음"이 되는 문제(뷰포트≪검색반경) 해결. 결과는 화면 안 개수로 피드백
+  let centers = [[cam.lat, cam.lng]];
+  const vb = mapBounds();
+  if(vb){
+    const qy = (vb.maxY-vb.minY)/4, qx = (vb.maxX-vb.minX)/4;
+    centers = [[cam.lat, cam.lng],
+      [cam.lat+qy, cam.lng-qx], [cam.lat+qy, cam.lng+qx],
+      [cam.lat-qy, cam.lng-qx], [cam.lat-qy, cam.lng+qx]];
+  }
+  Promise.all(centers.map(c =>
+    fetch(`${API_BASE}/api/search?q=${encodeURIComponent("음식점")}&c=${c[0].toFixed(5)},${c[1].toFixed(5)}&n=30`)
+      .then(r => r.ok ? r.json() : {places:[]})
+      .catch(() => ({places:[]}))
+  )).then(rs => {
+    const all = rs.flatMap(j => j.places || []);
+    if(!all.length) return done("검색이 잠시 막혔어요 — 조금 뒤 다시 시도해주세요"); // 5콜 전부 실패(429 등) — 버튼 유지
+    nbFetched.add(key);
+    for(const p of all){
+      if(DATA.some(d => d.id === p.id) || RULES.EXCLUDE_CAT.includes(p.cat)) continue;
+      nbSeen.delete(p.id); nbSeen.set(p.id, p);
+    }
+    while(nbSeen.size > NB_CAP) nbSeen.delete(nbSeen.keys().next().value);
+    nearby = [...nbSeen.values()];
+    drawMap();
+    btn.hidden = true;
+    const nb = mapBounds();
+    const inview = nb ? nearby.filter(p => p.y >= nb.minY && p.y <= nb.maxY && p.x >= nb.minX && p.x <= nb.maxX).length : nearby.length;
+    done(inview ? `이 지역 음식점 ${inview}곳 표시했어요` : "화면 안에서 찾은 음식점이 없어요 — 지도를 조금 축소해 보세요");
+  });
 }
 
 
@@ -1891,7 +1922,7 @@ render();
 autoLocate();  // 거리순 기본 정렬용 — 거부 시 추천순 점수로 폴백
 
 // ── PWA: 서비스워커 + 파비콘 + safe-area 방어 ──
-const APP_VER = "v19.4";
+const APP_VER = "v19.5";
 document.getElementById("ver").textContent = "퓨린 신호등 " + APP_VER;
 
 function toastAction(msg, label, fn){
