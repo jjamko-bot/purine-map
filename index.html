@@ -44,6 +44,7 @@
 
 *{box-sizing:border-box;margin:0;padding:0}
 /* 앱 셸: 최대 640px 중앙 컬럼 (웹뷰·모바일은 그대로, 태블릿·데스크톱은 프레임) */
+:root{--sab:env(safe-area-inset-bottom, 0px)}
 html{-webkit-text-size-adjust:100%;overflow-x:hidden;background:var(--gray50)}
 /* 홈 화면 앱(standalone)에서 상태바 뒤 레터박스가 헤더와 이어지도록 — 모바일 폭 한정 */
 @media (max-width:640px){html{background:var(--gray00)}}
@@ -51,13 +52,13 @@ body{overflow-x:hidden;max-width:640px;margin:0 auto}
 body{
   background:var(--gray00); color:var(--gray900);
   font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
-  line-height:1.5; padding-bottom:calc(88px + env(safe-area-inset-bottom));
+  line-height:1.5; padding-bottom:calc(88px + var(--sab));
 }
 .bnav{
   position:fixed;left:50%;transform:translateX(-50%);bottom:0;z-index:30;display:flex;
   width:100%;max-width:640px;
   background:var(--gray00);border-top:1px solid var(--gray100);
-  padding-bottom:env(safe-area-inset-bottom);
+  padding-bottom:var(--sab);
 }
 .bnav-item{
   flex:1;height:56px;border:0;background:none;color:var(--gray500);cursor:pointer;
@@ -260,7 +261,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 #lmap .star-mk{background:none;border:0}
 /* 지도 도구는 fixed — 인앱 브라우저(카톡 등)에서 100dvh가 과대 계산돼 mapbox 하단이
    화면 밖으로 밀려도, FAB처럼 실제 보이는 뷰포트 기준으로 붙는다 */
-.maptools{position:fixed;right:max(12px, calc(50vw - 308px));bottom:calc(74px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;z-index:20}
+.maptools{position:fixed;right:max(12px, calc(50vw - 308px));bottom:calc(74px + var(--sab));display:flex;flex-direction:column;gap:8px;z-index:20}
 .mbtn{
   width:40px;height:40px;border-radius:10px;border:1px solid var(--gray300);background:var(--gray00);color:var(--gray900);
   font-family:inherit;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.1);
@@ -269,7 +270,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 .mbtn .ic{width:18px;height:18px}
 .mbtn:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px}
 .maptoast{
-  position:fixed;left:50%;transform:translateX(-50%);bottom:calc(140px + env(safe-area-inset-bottom));z-index:60;background:var(--gray900);color:var(--gray00);
+  position:fixed;left:50%;transform:translateX(-50%);bottom:calc(140px + var(--sab));z-index:60;background:var(--gray900);color:var(--gray00);
   font-size:0.8125rem;font-weight:600;padding:9px 10px 9px 16px;border-radius:999px;display:none;white-space:nowrap;max-width:92%;
   align-items:center;gap:4px;
 }
@@ -292,7 +293,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 .sheet-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 20px 16px}
 .sheet-foot{
   flex:none;display:flex;align-items:center;gap:8px;
-  padding:10px 20px calc(14px + env(safe-area-inset-bottom));
+  padding:10px 20px calc(14px + var(--sab));
   background:var(--gray00);
 }
 .sheet-foot:empty{display:none}
@@ -363,7 +364,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 .sp-back{width:40px;height:40px;flex-shrink:0;border:0;border-radius:50%;background:none;color:var(--gray900);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .sp-back .ic{width:22px;height:22px}
 .sp-qwrap{flex:1;padding-bottom:0 !important}
-.spage-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:6px 16px calc(24px + env(safe-area-inset-bottom));width:100%}
+.spage-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:6px 16px calc(24px + var(--sab));width:100%}
 .sp-sec{margin-bottom:26px}
 .sp-label{display:flex;align-items:center;gap:4px;font-size:0.9375rem;font-weight:800;margin:14px 0 6px}
 .sp-label b{color:var(--carrot500);font-variant-numeric:tabular-nums}
@@ -426,6 +427,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
   font-size:0.8125rem;color:var(--carrot950);line-height:1.6;
 }
 .note b{font-weight:700}
+.ver{margin:10px 2px 0;font-size:0.75rem;color:var(--gray500)}
 .crit{margin-top:10px}
 .crit summary{cursor:pointer;font-weight:700;font-size:0.75rem;color:var(--carrot700)}
 .crit summary:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px}
@@ -486,6 +488,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
       <div class="crit-row plain">가게 등급은 대표 업종 기준이고, 주의 메뉴가 3분의 1 이상이면 주의로 올라가요(내려가진 않아요). 메뉴 등급은 메뉴 이름 기준이라 실제 조리와 다를 수 있어요.</div>
     </details>
   </div>
+  <div class="ver" id="ver"></div>
 </div>
 
 <main class="wrap" id="favs" hidden></main>
@@ -1821,15 +1824,55 @@ setView();
 render();
 autoLocate();  // 거리순 기본 정렬용 — 거부 시 추천순 점수로 폴백
 
-// ── PWA: 서비스워커 + 파비콘 ──
+// ── PWA: 서비스워커 + 파비콘 + safe-area 방어 ──
+const APP_VER = "v19.2";
+document.getElementById("ver").textContent = "퓨린 신호등 " + APP_VER;
+
+function toastAction(msg, label, fn){
+  const t = document.getElementById("maptoast");
+  t.innerHTML = `<span class="toast-msg">${esc(msg)}</span><button class="toast-undo">${esc(label)}</button>`;
+  t.style.display = "flex";
+  t.querySelector(".toast-undo").addEventListener("click", fn);
+  clearTimeout(t._tm); t._tm = setTimeout(()=>t.style.display="none", 10000);
+}
+
 // 아티팩트(claude.ai)에선 sw.js/아이콘이 없어 404 — 등록 실패를 조용히 무시하고,
 // 파비콘 link는 아티팩트의 🦊 파비콘을 덮지 않도록 실배포 호스트에서만 주입
 if("serviceWorker" in navigator){
-  try{ navigator.serviceWorker.register("./sw.js").catch(()=>{}); }catch(e){}
+  try{
+    // 새 sw.js가 제어권을 잡으면 1회 리로드해 새 셸 즉시 적용 (최초 설치 제외, 루프 방지 가드)
+    const hadController = !!navigator.serviceWorker.controller;
+    let swReloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if(!hadController || swReloaded) return;
+      swReloaded = true; location.reload();
+    });
+    // SWR 백그라운드 갱신이 새 문서를 받으면 sw가 알려줌 → 즉시 적용 토스트
+    navigator.serviceWorker.addEventListener("message", e => {
+      if(e.data && e.data.type === "pm-updated")
+        toastAction("새 버전이 도착했어요", "새로고침", () => location.reload());
+    });
+    navigator.serviceWorker.register("./sw.js").catch(()=>{});
+  }catch(e){}
 }
 if(!/claude\.ai$/.test(location.hostname)){
   const fav = document.createElement("link");
   fav.rel = "icon"; fav.type = "image/png"; fav.href = "icons/favicon-64.png";
   document.head.appendChild(fav);
 }
+
+// OS별 safe-area 방어: iOS 홈 인디케이터 기종이 standalone인데 env()가 0으로 붕괴하면 34px 폴백.
+// 안드로이드는 시스템이 제스처 바 위로 웹뷰를 배치해 env 0이 정상이므로 건드리지 않는다.
+(function(){
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if(!standalone || !ios) return;
+  const probe = document.createElement("div");
+  probe.style.cssText = "position:fixed;left:0;bottom:0;width:0;height:0;padding-bottom:env(safe-area-inset-bottom,0px);visibility:hidden;pointer-events:none";
+  document.body.appendChild(probe);
+  const inset = parseFloat(getComputedStyle(probe).paddingBottom) || 0;
+  probe.remove();
+  const tall = Math.max(screen.width, screen.height) / Math.min(screen.width, screen.height) >= 1.9; // 홈버튼 없는 기종 휴리스틱
+  if(inset === 0 && tall) document.documentElement.style.setProperty("--sab", "34px");
+})();
 </script>
