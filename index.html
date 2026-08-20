@@ -358,16 +358,16 @@ body.mapon > header{
 body.mapon .head-top{display:none}
 body.mapon #tabs{display:none}
 body.mapon .qwrap{pointer-events:auto;margin-top:12px}
-body.mapon .search{background:var(--gray00);color:var(--gray900);box-shadow:0 6px 20px rgba(0,0,0,.4), 0 1px 4px rgba(0,0,0,.24)}
+body.mapon .search{height:48px;font-size:1rem;background:var(--gray00);color:var(--gray900);box-shadow:0 6px 20px rgba(0,0,0,.4), 0 1px 4px rgba(0,0,0,.24)}
 body.mapon #mapwrap{display:block;flex:1;min-height:0;max-width:none;width:100%;padding:0;margin:0}
 body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 .hoods{
-  position:absolute;top:calc(64px + env(safe-area-inset-top));left:0;right:0;z-index:20;
+  position:absolute;top:calc(72px + env(safe-area-inset-top));left:0;right:0;z-index:20;
   display:flex;gap:6px;overflow:visible;padding:2px 12px;
   pointer-events:none;
 }
 .nearbtn{
-  position:absolute;top:calc(112px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:20;
+  position:absolute;top:calc(120px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:20;
   height:36px;padding:0 14px;border:0;border-radius:999px;cursor:pointer;
   background:var(--gray00);color:var(--carrot500);font-family:inherit;font-size:0.8125rem;font-weight:700;
   display:flex;align-items:center;gap:6px;box-shadow:0 4px 14px rgba(0,0,0,.22), 0 1px 3px rgba(0,0,0,.14);
@@ -2490,7 +2490,7 @@ lnkGo.addEventListener("click", () => {
 });
 
 // ── PWA: 서비스워커 + 파비콘 + safe-area 방어 ──
-const APP_VER = "v19.8.2";
+const APP_VER = "v19.8.3";
 document.getElementById("ver").textContent = "퓨린 신호등 " + APP_VER;
 
 function toastAction(msg, label, fn){
