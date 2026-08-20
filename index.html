@@ -2232,7 +2232,14 @@ function openFoodPage(name){
   fp.hidden = false; fp.scrollTop = 0;
   document.getElementById("fpBody").scrollTop = 0;
 }
-function closeFoodPage(){ document.getElementById("fpage").hidden = true; }
+function closeFoodPage(){
+  document.getElementById("fpage").hidden = true;
+  // 뒤로가기 = 음식 분석 탭 초기 화면으로 (검색 상태 해제 — Ken 플로우)
+  foodQ = "";
+  const inp = document.getElementById("foodIn");
+  if(inp){ inp.value = ""; inp.blur(); }
+  updateFoodRes();
+}
 let FOOD_POOL = null;
 function foodPool(){
   // 검색어 서제스트 풀 — 내장된 실제 메뉴명(판정된 것만, 중복 제거)
@@ -2483,7 +2490,7 @@ lnkGo.addEventListener("click", () => {
 });
 
 // ── PWA: 서비스워커 + 파비콘 + safe-area 방어 ──
-const APP_VER = "v19.8";
+const APP_VER = "v19.8.1";
 document.getElementById("ver").textContent = "퓨린 신호등 " + APP_VER;
 
 function toastAction(msg, label, fn){
