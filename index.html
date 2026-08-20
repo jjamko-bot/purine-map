@@ -67,7 +67,7 @@ body{
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
 }
 .bnav-item[data-on="1"]{color:var(--gray900);font-weight:700}
-.bnav-item .ic{width:22px;height:22px}
+.bnav-item .ic{width:24px;height:24px}
 .bnav-item:focus-visible{outline:2px solid var(--carrot500);outline-offset:-2px}
 body.favson .logo, body.favson .head-count{display:none}
 body.favson > header{border-bottom:0}
@@ -2495,7 +2495,7 @@ lnkGo.addEventListener("click", () => {
 });
 
 // ── PWA: 서비스워커 + 파비콘 + safe-area 방어 ──
-const APP_VER = "v19.8.7";
+const APP_VER = "v19.8.8";
 document.getElementById("ver").textContent = "퓨린 신호등 " + APP_VER;
 
 function toastAction(msg, label, fn){
