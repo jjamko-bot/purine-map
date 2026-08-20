@@ -207,6 +207,11 @@ body:not(.mapon) .food-qwrap{padding-bottom:0;margin-top:14px}
 .fd-meta-k{flex-shrink:0;width:64px;color:var(--gray500);font-weight:600}
 .fd-meta-v{color:var(--gray900);font-weight:600}
 .fd-sec{margin:20px 2px 8px;font-size:0.9375rem;font-weight:800}
+/* 재료 아이콘 타일 (당근 카테고리 문법) */
+.fp-ings{display:flex;gap:16px;margin:4px 0 14px}
+.fp-ing{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:52px}
+.fp-ing-e{width:54px;height:54px;border-radius:17px;background:var(--gray50);display:flex;align-items:center;justify-content:center;font-size:1.5rem}
+.fp-ing-l{font-size:0.6875rem;color:var(--gray600);font-weight:600;white-space:nowrap}
 .fd-txt{font-size:0.875rem;color:var(--gray700);line-height:1.65}
 .fd-shops{display:flex;flex-direction:column}
 .fd-shop{
@@ -2123,6 +2128,44 @@ function foodSellers(name){
   }
   return out;
 }
+// 퓨린 신호등 재료 아이콘 세트 — 48×48 플랫 컬러 SVG (v1)
+function foodIngs(r, name){
+  // "왜 이런 판정이에요?" 재료 이모지 행 — midLowDetail/reasonDetail과 동일한 매칭 순서 유지
+  const t = ((r.why || "") + " " + name).replace(/\s/g,"");
+  const has = arr => arr.some(k => t.includes(k));
+  if(r.g === "상"){
+    const W = r.why || "";
+    if(W.includes("해물 육수") || W.includes("생선 국물") || W.includes("갑각류 육수")) return [["🍲","해물 국물"]];
+    if(W.includes("육수") || W.includes("사골") || W.includes("돈코츠") || W.includes("라멘") || W.includes("선지")) return [["🍲","진한 국물"],["🦴","사골·뼈"]];
+    if(W.includes("내장")) return [["🍖","내장 부위"]];
+    if(W.includes("조개")) return [["🦪","조개류"]];
+    if(W.includes("갑각류") || W.includes("새우")) return [["🦐","새우"],["🦀","게·랍스터"]];
+    if(W.includes("등푸른") || W.includes("참치")) return [["🐟","등푸른생선"]];
+    if(W.includes("알류") || W.includes("곤이") || W.includes("캐비어")) return [["🍣","생선 알"]];
+    if(W.includes("건어물") || W.includes("염장") || W.includes("반건조")) return [["🎏","건어물"]];
+    if(W.includes("젓갈")) return [["🧂","젓갈"]];
+    return [];
+  }
+  if(r.g === "하"){
+    if(has(["두부","콩물","콩비지","비지"])) return [["🫘","콩·두부"]];
+    if(has(["계란","달걀","에그"])) return [["🥚","달걀"]];
+    if(has(["메밀","소바","막국수","모밀"])) return [["🌾","메밀·곡물"],["🍜","면"]];
+    if(has(["샐러드","나물","채소","야채","가지","호박","더덕","두릅"])) return [["🥬","잎채소"],["🥦","채소"]];
+    if(has(["김밥","주먹밥","솥밥","누룽지","죽","비빔"])) return [["🍚","밥·곡물"]];
+    if(has(["피자","파스타","스파게티","포카치아","빵","토마토"])) return [["🌾","밀가루"],["🧀","치즈"],["🍅","토마토"]];
+    if(has(["묵","도토리"])) return [["🌰","도토리·전분"]];
+    if(has(["치즈","리코타","부라타","유제품"])) return [["🥛","우유"],["🧀","치즈"]];
+    return [["🌾","곡물"],["🥬","채소"],["🫘","두부·콩"],["🥚","달걀"]];
+  }
+  if(r.g === "중"){
+    if(has(["냉면","칼국수","국수","우동","밀면","라멘","짬뽕","짜장","소바","모밀","메밀"])) return [["🍜","면 (낮음)"],["🍲","고기 육수 (중간)"]];
+    if(has(["국밥","탕","찌개","전골","수제비"])) return [["🍖","고기"],["🍲","국물"]];
+    if(has(["초밥","스시","회","연어","광어","도미","조기","갈치","오징어","낙지","주꾸미","문어","새꼬막"])) return [["🐟","흰살 생선"],["🦑","오징어·낙지"]];
+    if(has(["삼겹","불고기","갈비","육회","제육","돈까스","목살","항정","등심","안심","차돌","닭","치킨","오리","양","족발","보쌈","수육","편육","곰","돼지","소고기","우"])) return [["🥩","살코기"]];
+    return [["🥩","살코기"],["🐟","생선"]];
+  }
+  return [];
+}
 function foodCardHTML(name, r){
   // 상세 페이지 — 메인 이미지 없이 타이틀+정보행+섹션 카드 구조 (네이버 플레이스 상세 문법, Ken 레퍼런스)
   const m = FOOD_META[r.g];
@@ -2153,6 +2196,7 @@ function foodCardHTML(name, r){
   </div>
   <div class="fp-card">
     ${graded ? `<div class="fp-card-tit">왜 이런 판정이에요?</div>` : ""}
+    ${(() => { const ii = foodIngs(r, name); return ii.length ? `<div class="fp-ings">${ii.map(([e, l]) => `<div class="fp-ing"><span class="fp-ing-e">${e}</span><span class="fp-ing-l">${esc(l)}</span></div>`).join("")}</div>` : ""; })()}
     <div class="fd-txt">${esc(r.guide)}</div>
   </div>
   ${sellerHTML}`;
@@ -2439,7 +2483,7 @@ lnkGo.addEventListener("click", () => {
 });
 
 // ── PWA: 서비스워커 + 파비콘 + safe-area 방어 ──
-const APP_VER = "v19.7.2";
+const APP_VER = "v19.8";
 document.getElementById("ver").textContent = "퓨린 신호등 " + APP_VER;
 
 function toastAction(msg, label, fn){
