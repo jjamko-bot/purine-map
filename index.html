@@ -101,7 +101,9 @@ body.favson #qBtn{margin-left:0}
 .lmodal-desc b{font-weight:700;color:var(--gray700)}
 .lmodal-in{flex-shrink:0}
 .lmodal-err{font-size:0.8125rem;color:var(--red700)}
-.lmodal-go{height:44px}
+/* s-btn의 flex:1(basis 0)이 세로 플렉스에서 높이를 뭉갬 — 모달 버튼은 고정 높이로 */
+.lmodal-go{flex:none;height:48px;border-radius:12px;font-size:0.9375rem;margin-top:2px}
+.lmodal-go:disabled{opacity:.6}
 body:not(.mapon) .qwrap{padding-bottom:10px}
 .qwrap{position:relative}
 .qwrap[hidden],.tabs[hidden]{display:none}
@@ -2000,7 +2002,7 @@ lnkGo.addEventListener("click", () => {
 });
 
 // ── PWA: 서비스워커 + 파비콘 + safe-area 방어 ──
-const APP_VER = "v19.6";
+const APP_VER = "v19.6.1";
 document.getElementById("ver").textContent = "퓨린 신호등 " + APP_VER;
 
 function toastAction(msg, label, fn){
