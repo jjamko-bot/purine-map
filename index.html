@@ -2248,8 +2248,7 @@ function renderFoodHome(){
     <div class="food-hrow">${recent.map(x => {
       const m = FOOD_META[x.g] || FOOD_META[""];
       return `<button class="food-chip" data-ex="${esc(x.n)}"><span class="tdot" style="background:${m.dot}"></span>${esc(x.n)}<span class="chip-x" data-del="${esc(x.n)}" role="button" aria-label="삭제">${ic("close")}</span></button>`;
-    }).join("")}</div>` : `
-    <div class="food-hint">메뉴판이나 상 위의 음식 이름을 그대로 입력하면 안전/보통/주의로 알려드려요.</div>`;
+    }).join("")}</div>` : "";
   // 이런 메뉴는 어때요? — 내 즐겨찾기 가게들의 안전 메뉴(사진 있는 것) 셔플 추천
   const pool = [];
   const seenNm = new Set();
@@ -2284,7 +2283,7 @@ function renderFood(){
     foodWired = true;
     el.innerHTML = `
       <div class="qwrap food-qwrap">
-        <input class="search" id="foodIn" type="search" placeholder="지금 먹는 음식 이름을 입력해 보세요" autocomplete="off">
+        <input class="search" id="foodIn" type="search" placeholder="음식 이름을 입력해 보세요" autocomplete="off">
         <button class="qclear" id="foodClear" aria-label="지우기" hidden>${ic("close")}</button>
       </div>
       <div id="foodRes"></div>
@@ -2440,7 +2439,7 @@ lnkGo.addEventListener("click", () => {
 });
 
 // ── PWA: 서비스워커 + 파비콘 + safe-area 방어 ──
-const APP_VER = "v19.7";
+const APP_VER = "v19.7.1";
 document.getElementById("ver").textContent = "퓨린 신호등 " + APP_VER;
 
 function toastAction(msg, label, fn){
