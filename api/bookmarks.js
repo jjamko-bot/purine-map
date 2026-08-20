@@ -30,7 +30,7 @@ export default async function handler(req, res) {
     if (!shareId) return res.status(422).json({ error: "share id not found" });
     const r = await fetch(
       `https://pages.map.naver.com/save-pages/api/maps-bookmark/v3/shares/${shareId}/bookmarks?start=0&limit=1000`,
-      { headers: { "User-Agent": UA, Referer: "https://pages.map.naver.com/" } }
+      { headers: { "User-Agent": UA, Referer: "https://pages.map.naver.com/", "Accept-Language": "ko-KR,ko;q=0.9" } }
     );
     if (!r.ok) return res.status(502).json({ error: `upstream ${r.status}` });
     const d = await r.json();
