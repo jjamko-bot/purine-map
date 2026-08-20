@@ -536,7 +536,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 <div class="lmodal" id="lnkModal" hidden>
   <div class="lmodal-card" role="dialog" aria-modal="true" aria-label="네이버 즐겨찾기 가져오기">
     <div class="lmodal-tit">네이버 즐겨찾기 가져오기</div>
-    <div class="lmodal-desc">네이버 지도 앱 → 저장 → 폴더의 <b>공유 링크</b>를 붙여넣어 주세요. 음식점·술집만 가져와요.</div>
+    <div class="lmodal-desc">네이버 지도 앱 → 저장 → 폴더의 <b>공유 링크</b>를 붙여넣어 주세요.</div>
     <input class="search lmodal-in" id="lnkIn" type="url" placeholder="https://naver.me/…" autocomplete="off">
     <div class="lmodal-err" id="lnkErr" hidden></div>
     <button class="s-btn pri lmodal-go" id="lnkGo">가져오기</button>
@@ -2002,7 +2002,7 @@ lnkGo.addEventListener("click", () => {
 });
 
 // ── PWA: 서비스워커 + 파비콘 + safe-area 방어 ──
-const APP_VER = "v19.6.2";
+const APP_VER = "v19.6.3";
 document.getElementById("ver").textContent = "퓨린 신호등 " + APP_VER;
 
 function toastAction(msg, label, fn){
