@@ -80,15 +80,15 @@ body.locked{overflow:hidden}
 /* ── header ── */
 /* viewport-fit=cover라 standalone에서 콘텐츠가 상태바 아래로 확장될 수 있음 — 브라우저에선 env=0 */
 body > header{position:sticky;top:0;z-index:10;background:var(--gray00);border-bottom:1px solid var(--gray100);padding-top:env(safe-area-inset-top)}
-.head-top{display:flex;align-items:center;gap:8px;padding:16px 0 12px}
+.head-top{display:flex;align-items:center;gap:8px;padding:14px 0 10px;min-height:64px}
 h1{font-size:1.25rem;font-weight:800;letter-spacing:-.02em}
 .logo{width:26px;height:18px;flex-shrink:0}
 .head-count{font-size:0.8125rem;color:var(--gray600);font-variant-numeric:tabular-nums}
 .qbtn{
-  margin-left:auto;width:36px;height:36px;border:0;border-radius:50%;background:none;color:var(--gray900);
+  margin-left:auto;width:40px;height:40px;border:0;border-radius:50%;background:none;color:var(--gray900);
   display:flex;align-items:center;justify-content:center;cursor:pointer;
 }
-.qbtn .ic{width:21px;height:21px}
+.qbtn .ic{width:24px;height:24px}
 .qbtn:focus-visible{outline:2px solid var(--carrot500);outline-offset:1px}
 /* 링크 가져오기 버튼: 즐겨찾기 탭에서만 (검색 아이콘 좌측) */
 #lnkBtn{display:none}
@@ -165,7 +165,7 @@ body:not(.mapon) .food-qwrap{padding-bottom:0;margin-top:14px}
   width:40px;height:40px;border:0;border-radius:50%;background:none;color:var(--gray900);
   display:flex;align-items:center;justify-content:center;cursor:pointer;
 }
-.fp-back .ic{width:21px;height:21px}
+.fp-back .ic{width:24px;height:24px}
 .fp-body{background:var(--gray00)}
 .fp-card{background:var(--gray00);padding:18px 16px}
 .fp-card + .fp-card{border-top:10px solid var(--gray50)}
@@ -510,7 +510,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
   padding:calc(8px + env(safe-area-inset-top)) 16px 10px 6px;
 }
 .sp-back{width:40px;height:40px;flex-shrink:0;border:0;border-radius:50%;background:none;color:var(--gray900);display:flex;align-items:center;justify-content:center;cursor:pointer}
-.sp-back .ic{width:22px;height:22px}
+.sp-back .ic{width:24px;height:24px}
 .sp-qwrap{flex:1;padding-bottom:0 !important}
 .spage-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:6px 16px calc(24px + var(--sab));width:100%}
 .sp-sec{margin-bottom:26px}
@@ -2490,7 +2490,7 @@ lnkGo.addEventListener("click", () => {
 });
 
 // ── PWA: 서비스워커 + 파비콘 + safe-area 방어 ──
-const APP_VER = "v19.8.1";
+const APP_VER = "v19.8.2";
 document.getElementById("ver").textContent = "퓨린 신호등 " + APP_VER;
 
 function toastAction(msg, label, fn){
