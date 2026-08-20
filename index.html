@@ -440,7 +440,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
   max-height:86dvh;display:flex;flex-direction:column;overflow:hidden;
 }
 /* 그립 = 시트 고정 영역(스크롤 밖) — 항상 끌어서 닫기 가능 */
-.sheet-grip{flex:none;padding:6px 20px 0;cursor:grab;touch-action:none}
+.sheet-grip{touch-action:none;flex:none;padding:6px 20px 0;cursor:grab;touch-action:none}
 .sheet-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 20px 16px}
 .sheet-foot{
   flex:none;display:flex;align-items:center;gap:8px;
@@ -1161,6 +1161,11 @@ document.addEventListener("keydown", e => { if(e.key==="Escape") closeSheet(); }
     if(body.scrollTop <= 0 && y > lastY){        // 맨 위에서 아래로 → 즉시 시트 드래그로 전환
       begin(lastY);
       move(y); e.preventDefault();
+    } else {
+      // 스크롤러가 움직일 수 없는 방향의 터치는 소비 — iOS가 페이지(지도)를 팬하는 것 방지
+      const canScroll = body.scrollHeight - body.clientHeight > 1;
+      const atBottom = body.scrollTop + body.clientHeight >= body.scrollHeight - 1;
+      if(!canScroll || (y < lastY && atBottom)) e.preventDefault();
     }
     lastY = y;
   }, {passive: false});
@@ -2490,7 +2495,7 @@ lnkGo.addEventListener("click", () => {
 });
 
 // ── PWA: 서비스워커 + 파비콘 + safe-area 방어 ──
-const APP_VER = "v19.8.4";
+const APP_VER = "v19.8.5";
 document.getElementById("ver").textContent = "퓨린 신호등 " + APP_VER;
 
 function toastAction(msg, label, fn){
