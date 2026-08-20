@@ -45,10 +45,11 @@
 *{box-sizing:border-box;margin:0;padding:0}
 /* 앱 셸: 최대 640px 중앙 컬럼 (웹뷰·모바일은 그대로, 태블릿·데스크톱은 프레임) */
 :root{--sab:env(safe-area-inset-bottom, 0px)}
-html{-webkit-text-size-adjust:100%;overflow-x:hidden;background:var(--gray50)}
+html{-webkit-text-size-adjust:100%;overflow-x:hidden;background:var(--gray50);scrollbar-gutter:stable}
+/* 탭마다 스크롤바 유무가 바뀌며 중앙 정렬 레이아웃이 좌우로 밀리는 것 방지 (데스크톱) */
 /* 홈 화면 앱(standalone)에서 상태바 뒤 레터박스가 헤더와 이어지도록 — 모바일 폭 한정 */
 @media (max-width:640px){html{background:var(--gray00)}}
-body{overflow-x:hidden;max-width:640px;margin:0 auto}
+body{overflow-x:hidden;max-width:640px;margin:0 auto;min-height:100dvh}
 body{
   background:var(--gray00); color:var(--gray900);
   font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
@@ -137,6 +138,125 @@ body:not(.mapon) .qwrap{padding-bottom:10px}
   content:"";position:absolute;left:0;right:0;bottom:0;height:2px;border-radius:2px;background:var(--gray900);
 }
 
+/* ── 음식 분석 (food view) ── */
+body.foodon .logo, body.foodon .head-count, body.foodon #qBtn{display:none}
+body.foodon > header{border-bottom:0}
+body:not(.mapon) .food-qwrap{padding-bottom:0;margin-top:14px}
+.food-qwrap .search{height:48px;font-size:1rem}
+.food-hrow{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:2px 16px}
+.food-hrow::-webkit-scrollbar{display:none}
+.food-hrow .food-chip{flex-shrink:0;display:inline-flex;align-items:center;gap:6px}
+.food-chip .tdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.chip-x{display:inline-flex;align-items:center;color:var(--gray500);margin:0 -4px 0 2px;padding:4px}
+.chip-x .ic{width:13px;height:13px}
+/* 가이드: 등급 행 + 이미지 타일 가로 나열 (컬러는 라벨·도트만 — 톤 절제) */
+.fgi-sub{font-size:0.6875rem;color:var(--gray500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
+.food-sec .reco-tag{margin-left:2px}
+.food-sec .food-clear .ic{width:18px;height:18px}
+/* 음식 상세 — 풀스크린 페이지 (상품 상세 문법: 블러 히어로 + 뒤로가기) */
+.fpage{
+  position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:640px;
+  z-index:36;background:var(--gray00);overflow:hidden;display:flex;flex-direction:column;
+}
+.fpage[hidden]{display:none}
+.fp-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:calc(32px + var(--sab))}
+.fp-back{
+  position:absolute;top:calc(10px + env(safe-area-inset-top));left:12px;z-index:5;
+  width:38px;height:38px;border:0;border-radius:50%;background:var(--gray00);color:var(--gray900);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.18);
+}
+.fp-back .ic{width:20px;height:20px}
+.fp-body{background:var(--gray00)}
+.fp-card{background:var(--gray00);padding:18px 16px}
+.fp-card + .fp-card{border-top:10px solid var(--gray50)}
+.fp-head{padding-top:calc(60px + env(safe-area-inset-top))}
+.fp-cat{font-size:0.75rem;color:var(--gray500);margin-bottom:4px}
+.fp-title{font-size:1.375rem;font-weight:800;letter-spacing:-.01em;line-height:1.3}
+.fp-badge{display:flex;align-items:center;gap:6px;font-size:0.875rem;font-weight:700;margin-top:7px}
+.fp-badge .tdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.fp-rows{margin-top:16px;border-top:1px solid var(--gray100);padding-top:6px}
+.fp-row{display:flex;gap:14px;padding:9px 0;font-size:0.875rem}
+.fp-k{flex-shrink:0;width:64px;color:var(--gray500);font-weight:600}
+.fp-v{color:var(--gray900);font-weight:600}
+.fp-card-tit{font-size:1rem;font-weight:800;margin-bottom:10px}
+/* 검색어 서제스트 (지그재그 패턴): 매칭 하이라이트 + 등급 도트, 탭→상세 */
+.fs-list{margin-top:6px;display:flex;flex-direction:column}
+.fs-row{
+  display:flex;align-items:center;padding:13px 2px;border:0;border-bottom:1px solid var(--gray100);
+  background:none;font-family:inherit;font-size:0.9375rem;color:var(--gray900);cursor:pointer;text-align:left;
+}
+.fs-ic{display:flex;color:var(--gray500);margin-right:12px}
+.fs-ic .ic{width:17px;height:17px}
+.fs-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fs-row .tdot{margin-left:8px} /* 신호등 도트는 텍스트 옆 8px (우측 끝 아님) */
+.fs-hl{color:var(--carrot500);font-weight:700}
+.fs-row .tdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+/* 입력 중 미리보기 행 — 탭하면 상세 진입 */
+.food-prev{
+  margin-top:14px;width:100%;display:flex;align-items:center;gap:10px;padding:14px;border:1px solid var(--gray200);
+  border-radius:12px;background:var(--gray00);font-family:inherit;font-size:0.9375rem;color:var(--gray900);cursor:pointer;text-align:left;
+}
+.food-prev .tdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.food-prev-nm{font-weight:700}
+.food-prev-g{font-weight:700;margin-left:auto;flex-shrink:0}
+.food-prev-arr{display:flex;color:var(--gray500)}
+.food-prev-arr .ic{width:16px;height:16px;transform:rotate(-90deg)}
+.fd-meta{margin-top:14px;border:1px solid var(--gray100);border-radius:12px;padding:4px 14px}
+.fd-meta-row{display:flex;gap:14px;padding:10px 0;font-size:0.875rem}
+.fd-meta-row + .fd-meta-row{border-top:1px solid var(--gray100)}
+.fd-meta-k{flex-shrink:0;width:64px;color:var(--gray500);font-weight:600}
+.fd-meta-v{color:var(--gray900);font-weight:600}
+.fd-sec{margin:20px 2px 8px;font-size:0.9375rem;font-weight:800}
+.fd-txt{font-size:0.875rem;color:var(--gray700);line-height:1.65}
+.fd-shops{display:flex;flex-direction:column}
+.fd-shop{
+  display:flex;align-items:center;gap:11px;padding:10px 2px;border:0;border-bottom:1px solid var(--gray100);
+  background:none;font-family:inherit;font-size:0.9375rem;color:var(--gray900);cursor:pointer;text-align:left;
+}
+.fd-shop-img{width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0}
+.fd-shop-img.ph{background:var(--gsoft);color:var(--gcol);display:flex;align-items:center;justify-content:center;font-weight:800}
+.fd-shop-tit{flex:1;min-width:0;display:flex;flex-direction:column}
+.fd-shop-tit b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fd-shop-sub{font-size:0.8125rem;color:var(--gray600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fd-shop .gpill{flex-shrink:0}
+.fgr-row{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}
+.fgr-row::-webkit-scrollbar{display:none}
+.fgi{flex-shrink:0;width:76px;border:0;background:none;padding:0;font-family:inherit;text-align:left;cursor:pointer;color:inherit}
+.fgi img{width:76px;height:76px;border-radius:14px;object-fit:cover;background:var(--gray100);display:block}
+.fgi-ph{width:76px;height:76px;border-radius:14px;background:var(--gray100);color:var(--gray600);display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:800}
+.fgi-nm{font-size:0.75rem;font-weight:600;margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--gray700)}
+/* 함정: 번호 랭킹 리스트 (지그재그 급상승 검색어 패턴) */
+.food-traps{display:flex;flex-direction:column}
+.food-trap{
+  display:flex;align-items:center;gap:12px;padding:12px 2px;border:0;
+  background:none;font-family:inherit;font-size:0.9375rem;color:var(--gray900);cursor:pointer;text-align:left;
+}
+.trap-rank{width:16px;font-weight:800;color:var(--red700);font-variant-numeric:tabular-nums;flex-shrink:0;text-align:center}
+.food-trap-nm{font-weight:700;flex-shrink:0}
+.food-trap-why{font-size:0.8125rem;color:var(--gray600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:auto}
+.food-clear{margin-left:auto;border:0;background:none;color:var(--gray500);font-family:inherit;font-size:0.75rem;cursor:pointer;padding:4px}
+.food-hint{margin:10px 2px 0;font-size:0.8125rem;color:var(--gray600)}
+.food-card{
+  margin-top:16px;border-radius:16px;padding:20px;background:var(--gsoft, var(--gray50));
+  display:flex;flex-direction:column;gap:6px;
+}
+.food-grade{font-size:1.375rem;font-weight:800;color:var(--gcol, var(--gray900));display:flex;align-items:center;gap:8px}
+.food-grade .gdot{width:12px;height:12px;border-radius:50%;background:var(--gdot, var(--gray500));flex-shrink:0}
+.food-name{font-size:0.9375rem;font-weight:700;color:var(--gray900)}
+.food-why-tag{display:inline-block;font-size:0.75rem;font-weight:700;color:var(--gcol);background:var(--gray00);border-radius:6px;padding:2px 7px;vertical-align:2px;margin-left:2px}
+.food-guide{font-size:0.875rem;color:var(--gray700);line-height:1.55}
+.food-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.food-chip{
+  height:36px;padding:0 13px;border:1px solid var(--gray200);border-radius:999px;background:var(--gray00);
+  color:var(--gray900);font-family:inherit;font-size:0.8125rem;font-weight:600;cursor:pointer;
+}
+.food-sec{display:flex;align-items:center;margin:24px 2px 10px;font-size:0.9375rem;font-weight:800}
+.food-recent{display:flex;flex-direction:column}
+.food-r{
+  display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--gray100);
+  border-left:0;border-right:0;border-top:0;background:none;font-family:inherit;font-size:0.9375rem;color:var(--gray900);cursor:pointer;text-align:left;
+}
+.food-r .gpill{margin-left:auto}
 /* ── 추천 모듈 ── */
 .reco{margin:20px 0 6px}
 .reco-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
@@ -306,6 +426,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 }
 
 /* ── 바텀시트 ── */
+.sheet[hidden]{display:none} /* display:flex가 hidden을 이기는 함정 방어 (rAF 지연 등 상태 꼬임 대비) */
 .dim{position:fixed;inset:0;background:var(--dim);z-index:40;opacity:0}
 .dim.on{opacity:1}
 .sheet{
@@ -516,6 +637,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 </div>
 
 <main class="wrap" id="favs" hidden></main>
+<main class="wrap" id="food" hidden></main>
 
 <section class="spage" id="spage" hidden aria-label="검색">
   <div class="spage-head">
@@ -531,8 +653,13 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 <nav class="bnav" id="bnav" aria-label="주 탐색">
   <button class="bnav-item" data-view="home" role="tab"></button>
   <button class="bnav-item" data-view="map" role="tab"></button>
+  <button class="bnav-item" data-view="food" role="tab"></button>
   <button class="bnav-item" data-view="favs" role="tab"></button>
 </nav>
+<section class="fpage" id="fpage" hidden aria-label="음식 상세">
+  <button class="fp-back" id="fpBack" aria-label="뒤로"></button>
+  <div class="fp-body" id="fpBody"></div>
+</section>
 <div class="lmodal" id="lnkModal" hidden>
   <div class="lmodal-card" role="dialog" aria-modal="true" aria-label="네이버 즐겨찾기 가져오기">
     <div class="lmodal-tit">네이버 즐겨찾기 가져오기</div>
@@ -1893,7 +2020,307 @@ document.getElementById("spBody").addEventListener("click", e => {
 });
 
 /* ── 뷰 전환 ── */
-const NAV_DEFS = {home:["home","home_f","홈"], map:["map","map_f","지도"], favs:["bookmark","bookmark_f","즐겨찾기"]};
+/* ── 음식 분석 뷰 — 지금 먹는 음식의 퓨린 등급 즉석 판정 (전부 로컬 RULES, 오프라인 동작) ── */
+// 주의: 입력 중에 입력창을 리렌더하면 iOS/한글 IME 조합이 끊겨 자모가 분리된다 —
+// 입력창은 고정 DOM으로 두고 결과 영역(#foodRes)만 갱신할 것.
+let foodQ = "", FOODLOG = [];
+try{ FOODLOG = (JSON.parse(store.getItem("pm-foodlog")||"[]")).map(x => ({n:x.n, g:x.g, c:x.c||1})); }catch(e){}
+// 한눈에 보는 퓨린 가이드 — 대표 음식 (전부 판정 엔진으로 등급 검증된 이름만: 칩 등급 ↔ 판정 카드 불일치 방지)
+const FOOD_CHEAT = {
+  "상": ["곱창구이","조개찜","고등어구이","감자탕","새우튀김","장어구이","참치회","설렁탕"],
+  "중": ["삼겹살","불고기","육회","초밥","평양냉면","칼국수","제육볶음","돈까스"],
+  "하": ["두부김치","계란찜","샐러드","김밥","묵사발","토마토 스파게티","마르게리따 피자","크림 파스타"],
+};
+// 의외로 주의 — 이름은 순해 보여도 고퓨린 (근거는 렌더 시 highWhy로 동적 표기)
+const FOOD_TRAPS = ["황태해장국","북어국","날치알주먹밥","젓갈백반","어란파스타"];
+const FOOD_GUIDE = {
+  "하": "퓨린이 낮은 음식이에요. 마음 편히 드세요.",
+  "중": "적당량은 괜찮아요. 고기 육수라면 국물은 남기는 게 좋아요.",
+  "상": "퓨린이 높은 음식이에요. 양을 줄이거나 국물·내장은 피해 주세요.",
+};
+const FOOD_META = {
+  "하":{label:"안전", col:"var(--green700)", dot:"var(--green600)", soft:"var(--green50)"},
+  "중":{label:"보통", col:"var(--yellow700)", dot:"var(--yellow600)", soft:"var(--yellow50)"},
+  "상":{label:"주의", col:"var(--red700)", dot:"var(--red600)", soft:"var(--red50)"},
+  "주":{label:"등급 없음", col:"var(--gray700)", dot:"var(--gray500)", soft:"var(--gray50)"},
+  "":{label:"분석 불가", col:"var(--gray700)", dot:"var(--gray500)", soft:"var(--gray50)"},
+};
+function foodMatchedKey(n){
+  // 중/하 판정의 근거 키워드 — gradeMenuName과 동일한 최장 매칭
+  const nn = String(n).replace(/\s/g,"");
+  const hits = [];
+  for(const k of RULES.MENU_MID) if(nn.includes(k)) hits.push([k.length,1,k]);
+  for(const k of RULES.MENU_LOW) if(nn.includes(k)) hits.push([k.length,0,k]);
+  if(!hits.length) return "";
+  hits.sort((a,b) => (b[0]-a[0]) || (b[1]-a[1]));
+  return hits[0][2];
+}
+function reasonDetail(why){
+  // 판정 근거 그룹 → "어떤 것 때문에 어떻게 안 좋은지" 상세 설명
+  const W = String(why);
+  if(W.includes("해물 육수") || W.includes("생선 국물") || W.includes("갑각류 육수")) return "해물을 우린 국물은 퓨린이 농축돼요. 국물은 남기고 건더기 위주로 드세요.";
+  if(W.includes("육수") || W.includes("사골") || W.includes("돈코츠") || W.includes("라멘") || W.includes("선지")) return "뼈·고기·내장을 오래 우린 국물엔 퓨린이 녹아 농축돼요. 건더기보다 국물이 문제라, 먹더라도 국물은 최대한 남기는 게 좋아요.";
+  if(W.includes("내장")) return "간·곱창·천엽 같은 내장은 세포 밀도가 높아 퓨린 함량이 최상위예요(100g당 200mg 이상). 요산 수치를 가장 가파르게 올리는 부류라 가장 먼저 줄여야 해요.";
+  if(W.includes("조개")) return "조개·굴·전복 같은 패류는 대표적인 고퓨린 식품군이에요. 요산이 높을 땐 피하고, 평소에도 소량만 드시는 게 좋아요.";
+  if(W.includes("갑각류") || W.includes("새우")) return "새우·게·랍스터는 고퓨린 식품이에요. 튀김·구이 등 조리법이 바뀌어도 함량은 그대로라 양 자체를 줄이는 게 핵심이에요.";
+  if(W.includes("장어")) return "장어류는 고퓨린 어류예요. 보양식 이미지와 달리 통풍에는 부담이 커요.";
+  if(W.includes("등푸른") || W.includes("참치")) return "고등어·참치·정어리 같은 등푸른생선은 퓨린이 높아요. 흰살 생선으로 바꾸면 부담이 크게 줄어요.";
+  if(W.includes("알류") || W.includes("알·곤이") || W.includes("캐비어")) return "명란·날치알 같은 생선 알은 세포 덩어리라 퓨린 밀도가 높아요. 토핑이라도 양이 쌓이면 부담이 돼요.";
+  if(W.includes("건어물") || W.includes("염장") || W.includes("반건조")) return "말리는 과정에서 수분이 빠지며 퓨린이 몇 배로 농축돼요. 황태·먹태·쥐포류는 적은 양에도 함량이 높아요.";
+  if(W.includes("젓갈")) return "젓갈은 발효·농축 식품이라 적은 양에도 퓨린이 진해요. 반찬으로 조금씩만 드세요.";
+  if(W.includes("번데기")) return "번데기는 퓨린이 매우 높은 식품이에요.";
+  if(W.includes("민물고기")) return "내장까지 통째로 먹는 생선은 그만큼 퓨린 섭취량이 커져요.";
+  if(W.includes("해산물") || W.includes("해물")) return "여러 해산물이 섞인 요리엔 조개·새우 같은 고퓨린 재료가 대개 포함돼요. 패류·갑각류를 빼고 주문할 수 있는지 확인해 보세요.";
+  return "퓨린이 높은 재료가 들어가는 음식이에요. 양을 줄이고 국물·내장은 피하는 게 좋아요.";
+}
+function foodJudge(n){
+  const name = n.trim();
+  if(name.length < 2) return null;
+  const nn = name.replace(/\s/g,"");
+  const isDrink = !RULES.DRINK_EXC.some(e => nn.includes(e)) &&
+    (nn === "사케" || nn.endsWith("사케") || RULES.DRINK.some(k => nn.includes(k)));
+  if(isDrink) return {g:"주", why:"", guide:"술은 종류와 무관하게 요산 배출을 방해해요(특히 맥주). 등급 대신 ‘적게 마실수록 좋다’로 기억해 주세요."};
+  if(isSkipMenu(name)) return {g:"주", why:"", guide:"주류·사이드류로 보여 등급을 매기지 않아요. 술이라면 종류와 무관하게 요산 배출을 방해하니 적게 드시는 게 좋아요."};
+  const g = gradeMenuName(name, null);
+  if(g === "상"){ const why = highWhy(name, null); return {g, why, guide: reasonDetail(why)}; }
+  if(g === "중" || g === "하"){ const kw = foodMatchedKey(name); return {g, why: kw, guide: midLowDetail(g, kw, name)}; }
+  return {g:"", why:"", guide:"이름만으로는 재료를 알 수 없어요. 주재료(고기·해산물·채소 등)로 다시 검색해 보세요."};
+}
+function midLowDetail(g, kw, name){
+  // 보통/안전도 재료군 기준으로 세세하게 — 어떤 재료가 왜 낮은/중간인지 (Ken)
+  const t = (kw + " " + name).replace(/\s/g,"");
+  const has = arr => arr.some(k => t.includes(k));
+  if(g === "하"){
+    if(has(["두부","콩물","콩비지","비지"])) return "두부·콩 요리예요. 콩에도 퓨린이 있지만 식물성 퓨린은 요산으로 잘 전환되지 않아 통풍 위험을 높이지 않는 것으로 알려져 있어요. 대표적인 안심 단백질원이에요.";
+    if(has(["계란","달걀","에그"])) return "달걀이 중심인 음식이에요. 달걀은 세포 수가 적은 식품이라 퓨린이 거의 없어요(100g당 10mg 미만). 통풍 식단에서 가장 안전한 단백질원이에요.";
+    if(has(["메밀","소바","막국수","모밀"])) return "메밀면 중심 음식이에요. 메밀 같은 곡물은 퓨린이 낮고(100g당 50mg 이하), 고기 육수만 진하지 않다면 부담이 적어요.";
+    if(has(["샐러드","나물","채소","야채","가지","호박","더덕","두릅"])) return "채소가 중심인 음식이에요. 채소류는 퓨린이 낮은 데다, 채소의 퓨린은 요산 위험을 높이지 않는 것으로 알려져 있어 마음 편히 드셔도 돼요.";
+    if(has(["김밥","주먹밥","솥밥","누룽지","죽","비빔"])) return "밥·곡물이 중심인 음식이에요. 곡물은 퓨린이 낮아(100g당 50mg 이하) 부담이 적어요. 고기·해산물 토핑이 많아지면 조금씩 올라갈 수 있어요.";
+    if(has(["피자","파스타","스파게티","포카치아","빵","토마토"])) return "밀가루·치즈·토마토 구성이에요. 모두 저퓨린 재료라 부담이 적어요. 다만 새우·안초비 같은 해산물 토핑이 올라가면 등급이 달라질 수 있어요.";
+    if(has(["묵","도토리"])) return "전분(묵)이 중심인 음식이에요. 전분은 퓨린이 거의 없어 통풍 식단에서 부담이 가장 적은 축이에요.";
+    if(has(["치즈","리코타","부라타","유제품"])) return "유제품 중심이에요. 우유·치즈는 퓨린이 거의 없고, 유제품은 요산 배출을 돕는 것으로 알려져 있어요.";
+    return "곡물·채소·두부·달걀 같은 저퓨린 재료(100g당 50mg 이하) 위주의 음식이에요. 통풍 식단에서 부담이 적으니 마음 편히 드세요.";
+  }
+  if(has(["냉면","칼국수","국수","우동","밀면","라멘","짬뽕","짜장","소바","모밀","메밀"])) return "면 자체(곡물)는 퓨린이 낮지만, 고기·멸치 육수가 중간 수준을 만들어요. 면과 건더기 위주로 먹고 국물을 남기면 부담이 크게 줄어요.";
+  if(has(["국밥","탕","찌개","전골","수제비"])) return "고기 육수 기반 음식이에요. 국물에 퓨린이 우러나 있으니 건더기 위주로 먹고 국물은 남기는 게 좋아요. 내장·사골로 진하게 우린 집이라면 주의 쪽에 가까워져요.";
+  if(has(["초밥","스시","회","연어","광어","도미","조기","갈치","오징어","낙지","주꾸미","문어","새꼬막"])) return "흰살 생선·연체류는 100g당 50~150mg의 중간 수준이에요. 참치·고등어 같은 등푸른생선만 피하면 해산물 중에선 무난한 선택이에요.";
+  if(has(["삼겹","불고기","갈비","육회","제육","돈까스","목살","항정","등심","안심","차돌","닭","치킨","오리","양","족발","보쌈","수육","편육","곰","돼지","소고기","우"])) return "소·돼지·닭 살코기는 100g당 대략 70~140mg — 중간 구간이에요. 살코기 한 끼 적당량은 괜찮지만, 내장 부위를 곁들이거나 진한 육수·과식으로 가면 주의 구간으로 올라가요.";
+  return "살코기·일반 어류 수준(100g당 50~200mg)이에요. 한 끼 적당량은 괜찮지만, 국물까지 다 마시거나 양을 늘리면 부담이 쌓여요.";
+}
+function foodSellers(name){
+  // 이 메뉴를 파는 내 즐겨찾기 — 메뉴명 매칭 (상세 페이지의 연결 가치)
+  const nn = name.trim().replace(/\s/g,"");
+  const out = [];
+  for(const p of DATA){
+    for(const mn of (p.m||[])){
+      const mnn = mn.n.replace(/\s/g,"");
+      if(mnn.includes(nn) || (nn.length >= 3 && nn.includes(mnn))){
+        out.push({p, mn});
+        break;
+      }
+    }
+    if(out.length >= 4) break;
+  }
+  return out;
+}
+function foodCardHTML(name, r){
+  // 상세 페이지 — 메인 이미지 없이 타이틀+정보행+섹션 카드 구조 (네이버 플레이스 상세 문법, Ken 레퍼런스)
+  const m = FOOD_META[r.g];
+  const graded = ["상","중","하"].includes(r.g);
+  const LV = {"상":"높음 — 100g당 200mg 이상 수준","중":"중간 — 100g당 50~200mg 수준","하":"낮음 — 100g당 50mg 이하 수준"};
+  const HINT = {"상":"되도록 피하거나 소량만","중":"적당량은 괜찮아요","하":"부담 없이 드세요","주":"등급 대신 양 조절","":"판정 불가"};
+  const sellers = foodSellers(name);
+  const sellerHTML = sellers.length ? `
+  <div class="fp-card">
+    <div class="fp-card-tit">내 즐겨찾기에서 파는 곳</div>
+    <div class="fd-shops">${sellers.map(({p, mn}) => {
+      const gm = GMETA[gradeOf(p)];
+      return `<button class="fd-shop" data-shop="${esc(p.id)}">
+        ${mn.img ? `<img class="fd-shop-img" src="${mn.img}" alt="">` : `<div class="fd-shop-img ph" style="--gsoft:${gm.soft};--gcol:${gm.col}">${esc(p.name.slice(0,1))}</div>`}
+        <span class="fd-shop-tit"><b>${esc(p.name)}</b><span class="fd-shop-sub">${esc(mn.n)}${mn.p ? " · " + esc(Number(mn.p) ? Number(mn.p).toLocaleString() + "원" : mn.p) : ""}</span></span>
+        <span class="gpill" style="--gcol:${gm.col};--gsoft:${gm.soft}">${gm.label}</span>
+      </button>`;
+    }).join("")}</div>
+  </div>` : "";
+  return `<div class="fp-card fp-head">
+    <div class="fp-cat">음식 분석</div>
+    <div class="fp-title">${esc(name.trim())}</div>
+    <div class="fp-badge" style="color:${m.col}"><span class="tdot" style="background:${m.dot}"></span>${m.label} · ${HINT[r.g]}</div>
+    ${graded ? `<div class="fp-rows">
+      <div class="fp-row"><span class="fp-k">퓨린 수준</span><span class="fp-v">${LV[r.g]}</span></div>
+      ${r.why ? `<div class="fp-row"><span class="fp-k">판정 기준</span><span class="fp-v">${esc(r.why)}</span></div>` : ""}
+    </div>` : ""}
+  </div>
+  <div class="fp-card">
+    ${graded ? `<div class="fp-card-tit">왜 이런 판정이에요?</div>` : ""}
+    <div class="fd-txt">${esc(r.guide)}</div>
+  </div>
+  ${sellerHTML}`;
+}
+function foodLog(name, g){
+  const n = name.trim();
+  const prev = FOODLOG.find(x => x.n === n);
+  FOODLOG = [{n, g, c:(prev ? prev.c+1 : 1)}, ...FOODLOG.filter(x => x.n !== n)].slice(0, 30);
+  try{ store.setItem("pm-foodlog", JSON.stringify(FOODLOG)); }catch(e){}
+}
+const FOOD_IMG_CACHE = new Map();
+function foodImg(name){
+  if(FOOD_IMG_CACHE.has(name)) return FOOD_IMG_CACHE.get(name);
+  const nn = name.replace(/\s/g,"");
+  let img = "";
+  outer: for(const p of DATA){
+    for(const mn of (p.m||[])){
+      if(!mn.img) continue;
+      const mnn = mn.n.replace(/\s/g,"");
+      if(mnn.includes(nn) || (mnn.length >= 3 && nn.includes(mnn))){ img = mn.img; break outer; }
+    }
+  }
+  FOOD_IMG_CACHE.set(name, img);
+  return img;
+}
+function openFoodPage(name){
+  // 음식 탭의 핵심 플로우: 무엇을 탭하든 풀스크린 상세 페이지로 진입 (Ken — 상품 상세 문법)
+  const r = foodJudge(name);
+  if(!r) return;
+  if(["상","중","하"].includes(r.g)){ foodLog(name, r.g); renderFoodHome(); }
+  document.getElementById("fpBody").innerHTML = foodCardHTML(name, r);
+  const fp = document.getElementById("fpage");
+  fp.hidden = false; fp.scrollTop = 0;
+  document.getElementById("fpBody").scrollTop = 0;
+}
+function closeFoodPage(){ document.getElementById("fpage").hidden = true; }
+let FOOD_POOL = null;
+function foodPool(){
+  // 검색어 서제스트 풀 — 내장된 실제 메뉴명(판정된 것만, 중복 제거)
+  if(FOOD_POOL) return FOOD_POOL;
+  const seen = new Set(); FOOD_POOL = [];
+  // 일반 음식 사전 — 즐겨찾기 메뉴에 없어도 흔히 찾는 음식은 노출 (판정 가능한 것만 등록됨)
+  const DICT = ["햄버거","치킨","피자","떡볶이","김치찌개","된장찌개","순두부찌개","부대찌개","삼계탕","설렁탕","갈비탕","감자탕","뼈해장국","순대국밥","곰탕","짜장면","짬뽕","탕수육","마라탕","쌀국수","초밥","광어회","연어초밥","고등어구이","장어덮밥","알탕","대게","랍스터","굴국밥","조개구이","새우튀김","삼겹살","곱창","막창","제육볶음","불고기","족발","보쌈","육회","돈까스","냉면","막국수","잔치국수","콩국수","라면","우동","소바","카레","오므라이스","파스타","리조또","샐러드","샌드위치","김밥","비빔밥","두부김치","계란찜"];
+  for(const n of DICT){
+    const g = gradeMenuName(n, null);
+    if(["상","중","하"].includes(g)){ seen.add(n); FOOD_POOL.push({n, nn: n.replace(/\s/g,""), g}); }
+  }
+  for(const p of DATA) for(const mn of (p.m||[])){
+    const n = mn.n.trim();
+    if(n.length < 2 || n.length > 24 || seen.has(n)) continue;
+    seen.add(n);
+    if(["상","중","하"].includes(mn.g)) FOOD_POOL.push({n, nn: n.replace(/\s/g,""), g: mn.g});
+  }
+  return FOOD_POOL;
+}
+function fsRow(name, g, q){
+  const m = FOOD_META[g] || FOOD_META[""];
+  let nm = esc(name);
+  if(q){
+    const i = name.indexOf(q);
+    if(i >= 0) nm = esc(name.slice(0, i)) + '<b class="fs-hl">' + esc(name.slice(i, i + q.length)) + "</b>" + esc(name.slice(i + q.length));
+  }
+  return `<button class="fs-row" data-open="${esc(name)}">
+    <span class="fs-ic">${ic("search")}</span>
+    <span class="fs-nm">${nm}</span>
+    <span class="tdot" style="background:${m.dot}"></span>
+  </button>`;
+}
+function updateFoodRes(){
+  const el = document.getElementById("foodRes");
+  const q = foodQ.trim();
+  const r = foodJudge(foodQ);
+  const rows = [];
+  if(r) rows.push(fsRow(q, r.g, q)); // 입력한 그대로 — 첫 행 (전체 하이라이트)
+  if(q.replace(/\s/g,"").length >= 1){
+    const nq = q.replace(/\s/g,"");
+    for(const x of foodPool()){
+      if(x.n === q || !x.nn.includes(nq)) continue;
+      rows.push(fsRow(x.n, x.g, q.length && x.n.includes(q) ? q : nq));
+      if(rows.length >= 10) break;
+    }
+  }
+  el.innerHTML = rows.length ? `<div class="fs-list">${rows.join("")}</div>` : "";
+  document.getElementById("foodHome").hidden = !!rows.length;
+  document.getElementById("foodClear").hidden = !foodQ;
+}
+function renderFoodHome(){
+  // 섹션별 질감 분리(Ken — 전부 칩이면 헷갈림): 최근=아웃라인 칩 / 가이드=등급색 카드 캐러셀 / 함정=번호 리스트
+  const el = document.getElementById("foodHome");
+  const recent = FOODLOG.slice(0, 12);
+  const recentHTML = recent.length ? `
+    <div class="food-sec">최근 확인한 음식 <button class="food-clear" data-act="foodclearlog">전체 지우기</button></div>
+    <div class="food-hrow">${recent.map(x => {
+      const m = FOOD_META[x.g] || FOOD_META[""];
+      return `<button class="food-chip" data-ex="${esc(x.n)}"><span class="tdot" style="background:${m.dot}"></span>${esc(x.n)}<span class="chip-x" data-del="${esc(x.n)}" role="button" aria-label="삭제">${ic("close")}</span></button>`;
+    }).join("")}</div>` : `
+    <div class="food-hint">메뉴판이나 상 위의 음식 이름을 그대로 입력하면 안전/보통/주의로 알려드려요.</div>`;
+  // 이런 메뉴는 어때요? — 내 즐겨찾기 가게들의 안전 메뉴(사진 있는 것) 셔플 추천
+  const pool = [];
+  const seenNm = new Set();
+  for(const p of DATA) for(const mn of (p.m||[])){
+    if(mn.g === "하" && mn.img && !seenNm.has(mn.n)){ seenNm.add(mn.n); pool.push({p, mn}); }
+  }
+  const hourSeed = Math.floor(Date.now() / 3600000) % 997; // 1시간마다 자동으로 다른 추천
+  const picks = pool.map((x, i) => [((i + 7) * 9301 + hourSeed * 49297) % 233280, x])
+    .sort((x, y) => x[0] - y[0]).slice(0, 8).map(x => x[1]);
+  const guideHTML = pool.length ? `
+    <div class="food-sec">이런 메뉴는 어때요?</div>
+    <div class="fgr-row">${picks.map(({p, mn}) => `
+      <button class="fgi" data-ex="${esc(mn.n)}">
+        <img src="${mn.img}" alt="" loading="lazy">
+        <div class="fgi-nm">${esc(mn.n)}</div>
+        <div class="fgi-sub">${esc(p.name)}</div>
+      </button>`).join("")}</div>` : "";
+  const trapHTML = `
+    <div class="food-sec">의외로 주의예요</div>
+    <div class="food-traps">${FOOD_TRAPS.map((n, i) => `
+      <button class="food-trap" data-ex="${esc(n)}">
+        <span class="trap-rank">${i+1}</span>
+        <span class="food-trap-nm">${esc(n)}</span>
+        <span class="food-trap-why">${esc(highWhy(n, null))}</span>
+      </button>`).join("")}</div>`;
+  el.innerHTML = recentHTML + guideHTML + trapHTML;
+}
+let foodWired = false;
+function renderFood(){
+  const el = document.getElementById("food");
+  if(!foodWired){
+    foodWired = true;
+    el.innerHTML = `
+      <div class="qwrap food-qwrap">
+        <input class="search" id="foodIn" type="search" placeholder="지금 먹는 음식 이름을 입력해 보세요" autocomplete="off">
+        <button class="qclear" id="foodClear" aria-label="지우기" hidden>${ic("close")}</button>
+      </div>
+      <div id="foodRes"></div>
+      <div id="foodHome"></div>`;
+    const inp = document.getElementById("foodIn");
+    inp.addEventListener("input", () => { foodQ = inp.value; updateFoodRes(); }); // 입력창은 그대로 — IME 조합 보존
+    inp.addEventListener("keydown", e => {
+      if(e.isComposing || e.keyCode === 229) return; // 한글 조합 중 Enter — 마지막 글자 중복 방지
+      if(e.key === "Enter" && foodJudge(foodQ)){ inp.blur(); openFoodPage(foodQ); }
+    });
+    document.getElementById("foodClear").addEventListener("click", () => {
+      foodQ = ""; inp.value = ""; updateFoodRes(); inp.focus();
+    });
+    el.addEventListener("click", e => {
+      const c = e.target.closest("[data-act='foodclearlog']");
+      if(c){ FOODLOG = []; try{ store.setItem("pm-foodlog","[]"); }catch(err){} renderFoodHome(); return; }
+      const sp = e.target.closest("[data-shop]");
+      if(sp){ openSheet(sp.dataset.shop); return; }
+      const d = e.target.closest("[data-del]");
+      if(d){
+        FOODLOG = FOODLOG.filter(x => x.n !== d.dataset.del);
+        try{ store.setItem("pm-foodlog", JSON.stringify(FOODLOG)); }catch(err){}
+        renderFoodHome(); return;
+      }
+      const o = e.target.closest("[data-open]");
+      if(o){ openFoodPage(o.dataset.open); return; }
+      const b = e.target.closest("[data-ex]");
+      if(b){ openFoodPage(b.dataset.ex); return; }
+    });
+  }
+  document.getElementById("foodIn").value = foodQ;
+  updateFoodRes();
+  renderFoodHome();
+}
+
+const NAV_DEFS = {home:["home","home_f","홈"], map:["map","map_f","지도"], food:["restaurant","restaurant","음식 분석"], favs:["bookmark","bookmark_f","즐겨찾기"]};
 function setView(){
   document.querySelectorAll(".bnav-item").forEach(b => {
     const on = b.dataset.view === curView;
@@ -1904,14 +2331,17 @@ function setView(){
   });
   document.body.classList.toggle("mapon", curView==="map");
   document.body.classList.toggle("favson", curView==="favs");
-  document.querySelector("body > header h1").textContent = curView==="favs" ? "즐겨찾기" : "퓨린 신호등";
+  document.body.classList.toggle("foodon", curView==="food");
+  document.querySelector("body > header h1").textContent = curView==="favs" ? "즐겨찾기" : curView==="food" ? "음식 분석" : "퓨린 신호등";
   document.getElementById("list").hidden = curView!=="home";
   document.getElementById("footwrap").hidden = curView!=="home";
   document.getElementById("favs").hidden = curView!=="favs";
+  document.getElementById("food").hidden = curView!=="food";
   // 인라인 검색바는 지도 전용 — 홈/즐겨찾기의 🔍는 전용 검색 페이지를 연다
   document.querySelector("body > header .qwrap").hidden = curView!=="map";
-  document.getElementById("tabs").hidden = curView==="favs";
+  document.getElementById("tabs").hidden = curView==="favs" || curView==="food";
   store.setItem("pm-view", curView);
+  if(curView==="food"){ renderFood(); return; }
   if(curView==="favs"){ renderFavs(); return; }
   if(curView==="map"){
     tryNaver();
@@ -1961,6 +2391,14 @@ setView();
 render();
 autoLocate();  // 거리순 기본 정렬용 — 거부 시 추천순 점수로 폴백
 
+// 음식 상세 페이지 배선
+document.getElementById("fpBack").innerHTML = ic("back");
+document.getElementById("fpBack").addEventListener("click", closeFoodPage);
+document.getElementById("fpBody").addEventListener("click", e => {
+  const sp = e.target.closest("[data-shop]");
+  if(sp) openSheet(sp.dataset.shop); // 시트(z50)가 상세(z36) 위로 뜬다
+});
+
 // ── 네이버 즐겨찾기 링크 가져오기 (v19.6, Ken 제안) ──
 const lnkModal = document.getElementById("lnkModal"), lnkIn = document.getElementById("lnkIn"),
       lnkErr = document.getElementById("lnkErr"), lnkGo = document.getElementById("lnkGo");
@@ -2002,7 +2440,7 @@ lnkGo.addEventListener("click", () => {
 });
 
 // ── PWA: 서비스워커 + 파비콘 + safe-area 방어 ──
-const APP_VER = "v19.6.3";
+const APP_VER = "v19.7";
 document.getElementById("ver").textContent = "퓨린 신호등 " + APP_VER;
 
 function toastAction(msg, label, fn){
