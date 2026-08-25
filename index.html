@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>퓨린 신호등</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -117,7 +117,7 @@ body:not(.mapon) .qwrap{padding-bottom:10px}
 .search::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none;display:none}
 .search{
   width:100%;height:40px;padding:0 38px 0 14px;border:0;border-radius:10px;
-  background:var(--gray100);color:var(--gray900);font-size:0.9375rem;font-family:inherit;
+  background:var(--gray100);color:var(--gray900);font-size:1rem;font-family:inherit; /* 16px 미만이면 iOS가 포커스 시 강제 줌 */
 }
 .search::placeholder{color:var(--gray500)}
 .search:focus{outline:2px solid var(--carrot500);outline-offset:-1px}
@@ -1941,8 +1941,11 @@ function openSearchPage(){
   document.getElementById("spage").hidden = false;
   renderSPage();
   window.scrollTo(0, 0);
+  // 포커스는 탭 제스처 콜스택 안에서 동기로 — iOS는 비동기 focus()로는 키보드를 안 올림
   // preventScroll: iOS 웹뷰가 포커스된 인풋을 향해 페이지를 가로로 밀어 레이아웃이 잘리던 문제
-  setTimeout(() => { try{ document.getElementById("sq").focus({preventScroll:true}); }catch(e){ document.getElementById("sq").focus(); } window.scrollTo(0, 0); }, 60);
+  try{ document.getElementById("sq").focus({preventScroll:true}); }catch(e){ document.getElementById("sq").focus(); }
+  window.scrollTo(0, 0);
+  setTimeout(() => window.scrollTo(0, 0), 60);
 }
 function closeSearchPage(){
   document.getElementById("spage").hidden = true;
