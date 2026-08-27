@@ -628,7 +628,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
       <button class="qbtn" id="qBtn" aria-label="검색"></button>
     </div>
     <div class="qwrap">
-      <input class="search" id="q" type="search" placeholder="가게 이름 · 업종 · 동네 검색" autocomplete="off">
+      <input class="search" id="q" type="search" placeholder="가게 · 업종 · 동네 검색" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
       <button class="qclear" id="qClear" aria-label="검색어 지우기" hidden></button>
     </div>
     <div class="tabs" id="tabs" role="tablist"></div>
@@ -677,7 +677,7 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
   <div class="spage-head">
     <button class="sp-back" id="spBack" aria-label="뒤로"></button>
     <div class="qwrap sp-qwrap">
-      <input class="search" id="sq" type="search" placeholder="가게 이름 · 업종 · 동네 검색" autocomplete="off">
+      <input class="search" id="sq" type="search" placeholder="가게 · 업종 · 동네 검색" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
       <button class="qclear" id="sqClear" aria-label="검색어 지우기" hidden></button>
     </div>
   </div>
@@ -2443,7 +2443,7 @@ function renderFood(){
     foodWired = true;
     el.innerHTML = `
       <div class="qwrap food-qwrap">
-        <input class="search" id="foodIn" type="search" placeholder="음식 이름을 입력해 보세요" autocomplete="off">
+        <input class="search" id="foodIn" type="search" placeholder="궁금한 음식을 검색해 보세요" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
         <button class="qclear" id="foodClear" aria-label="지우기" hidden>${ic("close")}</button>
       </div>
       <div id="foodRes"></div>
@@ -2600,7 +2600,7 @@ lnkGo.addEventListener("click", () => {
 });
 
 // ── PWA: 서비스워커 + 파비콘 + safe-area 방어 ──
-const APP_VER = "v19.9";
+const APP_VER = "v19.9.1";
 document.getElementById("ver").textContent = "퓨린 신호등 " + APP_VER;
 
 function toastAction(msg, label, fn){
