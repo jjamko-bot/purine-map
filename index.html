@@ -1274,6 +1274,11 @@ document.getElementById("q").addEventListener("input", e => {
   render();
   if(curView==="map"){ drawMap(); mapJump(); srUpdate(false); }
 });
+// 검색 완료(Enter) 시 키보드 내리기 — 한글 조합 중 Enter는 무시
+document.getElementById("q").addEventListener("keydown", e => {
+  if(e.isComposing || e.keyCode === 229) return;
+  if(e.key === "Enter") e.target.blur();
+});
 document.getElementById("qClear").addEventListener("click", () => {
   const q = document.getElementById("q");
   q.value = ""; q.dispatchEvent(new Event("input")); q.focus();
@@ -1519,6 +1524,11 @@ function srFocus(rows){
   else if(LMAP){ LMAP.setView([p.y, p.x], Math.max(LMAP.getZoom(), 15)); }
   else { M.cx = p.x; M.cy = mercY(p.y); M.k = Math.max(M.k, 6000); saveCam(); drawMap(); }
 }
+// 결과 패널을 스크롤하기 시작하면 키보드 내리기 (네이버 패턴)
+srList.addEventListener("touchmove", () => {
+  const q = document.getElementById("q");
+  if(document.activeElement === q) q.blur();
+}, {passive:true});
 srList.addEventListener("click", e => {
   const nv = e.target.closest("[data-nvid]");
   const mine = e.target.closest("[data-id]");
@@ -2630,7 +2640,7 @@ lnkGo.addEventListener("click", () => {
 });
 
 // ── PWA: 서비스워커 + 파비콘 + safe-area 방어 ──
-const APP_VER = "v19.9.3";
+const APP_VER = "v19.9.4";
 document.getElementById("ver").textContent = "퓨린 신호등 " + APP_VER;
 
 function toastAction(msg, label, fn){
