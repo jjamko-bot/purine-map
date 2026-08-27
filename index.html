@@ -1652,19 +1652,29 @@ function declutter(items){
   return ok;
 }
 let autoLocated = false;
-function applyUserLoc(){
+function drawUserMarker(){
+  // 내 위치 마커만 갱신 (카메라 이동 없음) — 캐시된 좌표로도 항상 표시
   if(!userLoc) return;
   if(NMAP){
     if(nUser) nUser.setMap(null);
     nUser = new naver.maps.Marker({position:new naver.maps.LatLng(userLoc.y,userLoc.x), map:NMAP,
       icon:{content:'<div class="nvmk" style="width:16px;height:16px;border-radius:50%;background:#0088cc;border:2px solid #fff;box-shadow:0 0 0 4px rgba(0,136,204,.25)"></div>', anchor:new naver.maps.Point(8,8)}});
-    NMAP.setCenter(new naver.maps.LatLng(userLoc.y, userLoc.x));
-    if(NMAP.getZoom() < 14) NMAP.setZoom(14, true);
     return;
   }
   if(LMAP){
     if(lUser) lUser.remove();
     lUser = L.circleMarker([userLoc.y, userLoc.x], {radius:7, color:"#fff", weight:2, fillColor:"#0088cc", fillOpacity:1}).addTo(LMAP);
+  }
+}
+function applyUserLoc(){
+  if(!userLoc) return;
+  drawUserMarker();
+  if(NMAP){
+    NMAP.setCenter(new naver.maps.LatLng(userLoc.y, userLoc.x));
+    if(NMAP.getZoom() < 14) NMAP.setZoom(14, true);
+    return;
+  }
+  if(LMAP){
     LMAP.setView([userLoc.y, userLoc.x], Math.max(LMAP.getZoom(), 14));
     return;
   }
@@ -1683,7 +1693,7 @@ async function autoLocate(){
   navigator.geolocation.getCurrentPosition(pos => {
     setUserLoc(pos);
     if(curView==="map") applyUserLoc();
-    else render();
+    else { drawUserMarker(); render(); }
   }, ()=>{ if(curView!=="map") render(); }, {timeout:6000, maximumAge:300000});
 }
 function tryNaver(){
@@ -1735,6 +1745,7 @@ function initNaver(){
     if(el.clientWidth < 50 && tries < 25) return setTimeout(()=>boot(tries+1), 200);
     if(userLoc){ NMAP.setCenter(new naver.maps.LatLng(userLoc.y, userLoc.x)); NMAP.setZoom(14, false); } // 내 위치 우선 (v8.3 의도 복원)
     else if(!cam) nvFit(mapPlaces());
+    drawUserMarker(); // 캐시된 좌표로도 내 위치 마커 항상 표시
     nRefresh();
     setTimeout(nRefresh, 600); // setCenter/setZoom 직후 bounds가 아직 안 따라온 경우 컬링 보정
     autoLocate();
@@ -1857,6 +1868,7 @@ function initLeaflet(){
         if(LMAP.getZoom() >= 13) lRefresh();
         nbIdle();
       });
+      drawUserMarker(); // 캐시된 좌표로도 내 위치 마커 항상 표시
       lRefresh();
       autoLocate();
     };
@@ -2653,7 +2665,7 @@ lnkGo.addEventListener("click", () => {
 });
 
 // ── PWA: 서비스워커 + 파비콘 + safe-area 방어 ──
-const APP_VER = "v19.9.5";
+const APP_VER = "v19.9.6";
 document.getElementById("ver").textContent = "퓨린 신호등 " + APP_VER;
 
 function toastAction(msg, label, fn){
