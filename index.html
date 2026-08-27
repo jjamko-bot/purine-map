@@ -412,6 +412,31 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
 /* 지도 도구는 fixed — 인앱 브라우저(카톡 등)에서 100dvh가 과대 계산돼 mapbox 하단이
    화면 밖으로 밀려도, FAB처럼 실제 보이는 뷰포트 기준으로 붙는다 */
 .maptools{position:fixed;right:max(12px, calc(50vw - 308px));bottom:calc(74px + var(--sab));display:flex;flex-direction:column;gap:8px;z-index:20}
+/* ── 지도 검색 결과 바텀 패널 (네이버 '가까운 순' 패턴) ── */
+.sr-panel{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:calc(68px + var(--sab));
+  width:calc(100% - 24px);max-width:616px;max-height:42dvh;z-index:25;
+  display:flex;flex-direction:column;background:var(--gray00);border-radius:16px;
+  box-shadow:0 8px 30px rgba(0,0,0,.35), 0 1px 4px rgba(0,0,0,.2);overflow:hidden;
+}
+.sr-panel[hidden], body:not(.mapon) .sr-panel{display:none}
+.sr-head{flex-shrink:0;display:flex;align-items:center;padding:14px 10px 8px 16px;font-size:0.875rem;color:var(--gray600)}
+.sr-head b{color:var(--gray900);font-weight:700}
+.sr-close{
+  margin-left:auto;width:32px;height:32px;border:0;background:none;color:var(--gray600);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:50%;flex-shrink:0;
+}
+.sr-close .ic{width:16px;height:16px}
+.sr-list{overflow-y:auto;overscroll-behavior:contain;padding:0 8px 8px}
+.sr-row{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:12px;cursor:pointer}
+.sr-row:active{background:var(--gray50)}
+.sr-row .avatar{width:44px;height:44px;border-radius:12px;object-fit:cover;flex-shrink:0}
+.sr-row .avatar.ph{display:flex;align-items:center;justify-content:center;background:var(--gsoft);color:var(--gcol);font-weight:800;font-size:1rem}
+.sr-body{flex:1;min-width:0}
+.sr-name{font-size:0.9375rem;font-weight:700;color:var(--gray900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sr-sub{font-size:0.8125rem;color:var(--gray600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.sr-sub .dist{color:var(--gray900);font-weight:700;font-variant-numeric:tabular-nums}
+.sr-empty{padding:16px 16px 22px;color:var(--gray600);font-size:0.875rem;text-align:center}
 .mbtn{
   width:40px;height:40px;border-radius:10px;border:1px solid var(--gray300);background:var(--gray00);color:var(--gray900);
   font-family:inherit;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.1);
@@ -624,6 +649,10 @@ body.mapon #list, body.mapon #footwrap, body.mapon #favs{display:none}
       <button class="mbtn" id="zout" aria-label="축소"></button>
       <button class="mbtn" id="locbtn" aria-label="내 위치"></button>
     </div>
+    <div class="sr-panel" id="srPanel" hidden>
+      <div class="sr-head"><span id="srTitle"></span><button class="sr-close" id="srClose" aria-label="검색 닫기"></button></div>
+      <div class="sr-list" id="srList"></div>
+    </div>
   </div>
 </div>
 
@@ -778,16 +807,10 @@ function nvSearch(){
       nvLoading = false;
       nvResults = (j.places||[]).filter(p => !DATA.some(d => d.id === p.id));
       render();
-      if(curView === "map"){
-        drawMap();
-        // 동네명 검색은 mapJump가 이미 그 지역으로 이동 — 가게 검색일 때만 결과 범위로 fit
-        if(!GEO.names.some(n => n[2].includes(query))){
-          const pts = mapPlaces().concat(nvResults.filter(p => p.x));
-          if(pts.length){ if(NMAP) nvFit(pts); else if(LMAP) lFit(pts); }
-        }
-      }
+      // 지도에선 전국 fit 대신 가까운 순 패널 + 근접 결과로 카메라 이동 (네이버 패턴)
+      if(curView === "map"){ drawMap(); srUpdate(true); }
     })
-    .catch(() => { if(seq === nvSeq){ nvLoading = false; nvResults = null; render(); } });
+    .catch(() => { if(seq === nvSeq){ nvLoading = false; nvResults = null; render(); if(curView === "map") srUpdate(true); } });
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function fmtPrice(p){
@@ -1238,7 +1261,7 @@ document.getElementById("q").addEventListener("input", e => {
   clearTimeout(nvTimer);
   if(query.length >= 2){ nvLoading = true; nvTimer = setTimeout(nvSearch, 450); }
   render();
-  if(curView==="map"){ drawMap(); mapJump(); }
+  if(curView==="map"){ drawMap(); mapJump(); srUpdate(false); }
 });
 document.getElementById("qClear").addEventListener("click", () => {
   const q = document.getElementById("q");
@@ -1420,13 +1443,91 @@ function mapJump(){
       M.cx = d[0]; M.cy = mercY(d[1]); M.k = Math.max(M.k, 6000); saveCam(); drawMap(); return;
     }
   }
-  const pts = mapPlaces();
-  if(query && pts.length){
-    if(NMAP){ nvFit(pts); return; }
-    if(LMAP){ lFit(pts); return; }
-    fitMap(pts); saveCam(); drawMap();
-  }
+  // 가게 검색은 카메라를 유지 — 결과 도착 시 srFocus가 가까운 곳으로 이동 (전국 fit 제거)
 }
+
+/* ── 지도 검색 결과 패널 — 기준점(동네명>내 위치>지도 중심) 가까운 순 (네이버 패턴) ── */
+const srPanel = document.getElementById("srPanel"), srList = document.getElementById("srList"), srTitle = document.getElementById("srTitle");
+function searchAnchor(){
+  const d = GEO.names.find(n => n[2].includes(query));
+  if(d) return {x:d[0], y:d[1]};
+  if(userLoc) return {x:userLoc.x, y:userLoc.y};
+  const c = mapCam();
+  if(c) return {x:c.lng, y:c.lat};
+  if(M.inited) return {x:M.cx, y:(2*Math.atan(Math.exp(-M.cy*Math.PI/180)) - Math.PI/2)*180/Math.PI}; // 캔버스 폴백 카메라
+  return null;
+}
+function distA(p, a){
+  if(!a || !p.x) return null;
+  const R = 6371000, toR = Math.PI/180;
+  const dLat = (p.y-a.y)*toR, dLng = (p.x-a.x)*toR;
+  const h = Math.sin(dLat/2)**2 + Math.cos(a.y*toR)*Math.cos(p.y*toR)*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+function srRows(){
+  const a = searchAnchor();
+  const mine = DATA.filter(p => matches(p)).map(p => ({p, ext:false, d:distA(p, a)}));
+  const ext = (nvResults||[]).map(p => ({p, ext:true, d:distA(p, a)}));
+  return mine.concat(ext).sort((x,y) => (x.d ?? 1e12) - (y.d ?? 1e12));
+}
+function srUpdate(focus){
+  if(curView !== "map" || query.length < 2){ srPanel.hidden = true; return; }
+  const rows = srRows();
+  srPanel.hidden = false;
+  srTitle.innerHTML = `<b>‘${esc(query)}’</b> · ${nvLoading ? "검색 중…" : `${rows.length}곳 · 가까운 순`}`;
+  srList.innerHTML = rows.length ? rows.map(r => {
+    const p = r.p;
+    const g = r.ext ? gradePlaceCat(p.cat).grade : gradeOf(p);
+    const m = GMETA[g];
+    const img = r.ext ? "" : repImg(p);
+    return `<div class="sr-row" data-${r.ext?"nvid":"id"}="${p.id}" role="button" tabindex="0" aria-label="${esc(p.name)}">
+      ${img?`<img class="avatar" src="${img}" alt="" loading="lazy">`
+          :`<div class="avatar ph" style="--gsoft:${m.soft};--gcol:${m.col}">${esc((p.name||"?").slice(0,1))}</div>`}
+      <div class="sr-body">
+        <div class="sr-name">${esc(p.name)}</div>
+        <div class="sr-sub">${r.d!==null?`<span class="dist">${fmtDist(r.d)}</span> · `:""}${esc(p.cat||"분류 없음")}${p.addr?` · ${esc(p.addr)}`:""}</div>
+      </div>
+      <span class="gpill" style="--gcol:${m.col};--gsoft:${m.soft}">${m.label}</span>
+    </div>`;
+  }).join("") : (nvLoading ? "" : `<div class="sr-empty">검색 결과가 없어요 — 다른 이름으로 찾아보세요</div>`);
+  if(focus) srFocus(rows);
+}
+function srFocus(rows){
+  if(GEO.names.some(n => n[2].includes(query))) return; // 동네명은 mapJump가 이미 이동
+  const pts = rows.filter(r => r.p.x && r.d !== null);
+  if(!pts.length) return;
+  // 기준점 2km 안 결과가 여럿이면 그 범위로, 아니면 가장 가까운 한 곳으로
+  const near = pts.filter(r => r.d <= 2000).slice(0, 5).map(r => r.p);
+  const tgt = near.length >= 2 ? near : [pts[0].p];
+  if(tgt.length > 1){
+    if(NMAP) nvFit(tgt); else if(LMAP) lFit(tgt); else { fitMap(tgt); saveCam(); drawMap(); }
+    return;
+  }
+  const p = tgt[0];
+  if(NMAP){ NMAP.setCenter(new naver.maps.LatLng(p.y, p.x)); if(NMAP.getZoom() < 15) NMAP.setZoom(15, true); }
+  else if(LMAP){ LMAP.setView([p.y, p.x], Math.max(LMAP.getZoom(), 15)); }
+  else { M.cx = p.x; M.cy = mercY(p.y); M.k = Math.max(M.k, 6000); saveCam(); drawMap(); }
+}
+srList.addEventListener("click", e => {
+  const nv = e.target.closest("[data-nvid]");
+  const mine = e.target.closest("[data-id]");
+  const p = nv ? (nvResults||[]).find(x => x.id === nv.dataset.nvid) : mine ? DATA.find(x => x.id === mine.dataset.id) : null;
+  if(!p) return;
+  if(p.x){
+    if(NMAP){ NMAP.setCenter(new naver.maps.LatLng(p.y, p.x)); if(NMAP.getZoom() < 15) NMAP.setZoom(15, true); }
+    else if(LMAP){ LMAP.setView([p.y, p.x], Math.max(LMAP.getZoom(), 15)); }
+  }
+  nv ? openExtSheet(p) : openSheet(p.id);
+});
+srList.addEventListener("keydown", e => {
+  if(e.key !== "Enter" && e.key !== " ") return;
+  const row = e.target.closest(".sr-row");
+  if(row){ e.preventDefault(); row.click(); }
+});
+document.getElementById("srClose").addEventListener("click", () => {
+  const q = document.getElementById("q");
+  q.value = ""; q.dispatchEvent(new Event("input"));
+});
 const ptrs = new Map();
 let panStart = null, pinchStart = null, moved = 0;
 cv.addEventListener("pointerdown", e => {
@@ -2439,6 +2540,7 @@ document.getElementById("qBtn").innerHTML = ic("search");
 document.getElementById("qBtn").addEventListener("click", openSearchPage);
 document.getElementById("spBack").innerHTML = ic("back");
 document.getElementById("sqClear").innerHTML = ic("close");
+document.getElementById("srClose").innerHTML = ic("close");
 document.getElementById("zin").innerHTML = ic("add");
 document.getElementById("zout").innerHTML = ic("subtraction");
 document.getElementById("locbtn").innerHTML = ic("gps");
@@ -2498,7 +2600,7 @@ lnkGo.addEventListener("click", () => {
 });
 
 // ── PWA: 서비스워커 + 파비콘 + safe-area 방어 ──
-const APP_VER = "v19.8.9";
+const APP_VER = "v19.9";
 document.getElementById("ver").textContent = "퓨린 신호등 " + APP_VER;
 
 function toastAction(msg, label, fn){
