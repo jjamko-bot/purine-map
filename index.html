@@ -138,6 +138,16 @@ body:not(.mapon) .qwrap{padding-bottom:10px}
   content:"";position:absolute;left:0;right:0;bottom:0;height:2px;border-radius:2px;background:var(--gray900);
 }
 
+/* ── 음식 분석 검색 모드 — 입력창 고정 + 리스트 자체 스크롤 (네이버 패턴) ── */
+body.foodsearch{overflow:hidden}
+body.foodsearch #foodRes{
+  position:fixed;left:0;right:0;top:var(--fs-top,190px);bottom:0;z-index:25;
+  background:var(--gray00);overflow-y:auto;overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  padding:0 16px calc(96px + var(--sab));
+}
+body.foodsearch #foodRes .fs-list{max-width:608px;margin:0 auto}
+
 /* ── 음식 분석 (food view) ── */
 body.foodon .logo, body.foodon .head-count, body.foodon #qBtn{display:none}
 body.foodon > header{border-bottom:0}
@@ -2116,6 +2126,11 @@ document.getElementById("sqClear").addEventListener("click", () => {
   const sq = document.getElementById("sq");
   sq.value = ""; sq.dispatchEvent(new Event("input")); sq.focus();
 });
+// 결과를 스크롤하기 시작하면 키보드 내리기 (네이버 패턴)
+document.getElementById("spBody").addEventListener("touchmove", () => {
+  const sq = document.getElementById("sq");
+  if(document.activeElement === sq) sq.blur();
+}, {passive:true});
 document.getElementById("spBody").addEventListener("click", e => {
   const rq = e.target.closest("[data-rq]");
   if(rq){
@@ -2398,6 +2413,15 @@ function updateFoodRes(){
   el.innerHTML = rows.length ? `<div class="fs-list">${rows.join("")}</div>` : "";
   document.getElementById("foodHome").hidden = !!rows.length;
   document.getElementById("foodClear").hidden = !foodQ;
+  // 검색 모드 = 네이버 패턴: 페이지 스크롤 잠그고 리스트만 자체 스크롤 (입력창 고정)
+  const active = !!rows.length && curView === "food";
+  const wasActive = document.body.classList.contains("foodsearch");
+  document.body.classList.toggle("foodsearch", active);
+  if(active && !wasActive){
+    window.scrollTo(0, 0);
+    const qr = document.querySelector(".food-qwrap").getBoundingClientRect();
+    document.documentElement.style.setProperty("--fs-top", Math.round(qr.bottom + 8) + "px");
+  }
 }
 function renderFoodHome(){
   // 섹션별 질감 분리(Ken — 전부 칩이면 헷갈림): 최근=아웃라인 칩 / 가이드=등급색 카드 캐러셀 / 함정=번호 리스트
@@ -2457,6 +2481,10 @@ function renderFood(){
     document.getElementById("foodClear").addEventListener("click", () => {
       foodQ = ""; inp.value = ""; updateFoodRes(); inp.focus();
     });
+    // 리스트를 스크롤하기 시작하면 키보드 내리기 (네이버 패턴 — 탭은 blur 없이 그대로)
+    document.getElementById("foodRes").addEventListener("touchmove", () => {
+      if(document.activeElement === inp) inp.blur();
+    }, {passive:true});
     el.addEventListener("click", e => {
       const c = e.target.closest("[data-act='foodclearlog']");
       if(c){ FOODLOG = []; try{ store.setItem("pm-foodlog","[]"); }catch(err){} renderFoodHome(); return; }
@@ -2500,6 +2528,7 @@ function setView(){
   document.querySelector("body > header .qwrap").hidden = curView!=="map";
   document.getElementById("tabs").hidden = curView==="favs" || curView==="food";
   store.setItem("pm-view", curView);
+  if(curView!=="food") document.body.classList.remove("foodsearch"); // 검색 모드 잠금 해제
   if(curView==="food"){ renderFood(); return; }
   if(curView==="favs"){ renderFavs(); return; }
   if(curView==="map"){
@@ -2600,7 +2629,7 @@ lnkGo.addEventListener("click", () => {
 });
 
 // ── PWA: 서비스워커 + 파비콘 + safe-area 방어 ──
-const APP_VER = "v19.9.1";
+const APP_VER = "v19.9.2";
 document.getElementById("ver").textContent = "퓨린 신호등 " + APP_VER;
 
 function toastAction(msg, label, fn){
