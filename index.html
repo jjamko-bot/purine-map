@@ -1628,7 +1628,14 @@ document.getElementById("locbtn").addEventListener("click", ()=>{
   navigator.geolocation.getCurrentPosition(pos => {
     setUserLoc(pos);
     applyUserLoc();
-  }, ()=>toast("위치 권한이 막혀 있어요 — 동네 칩이나 검색으로 이동해 보세요"), {timeout:5000});
+  }, err => {
+    // 실패 원인별 안내 — 전엔 모든 실패가 "권한이 막혀 있어요"로 떠서 오해를 불렀다
+    let inFrame = false; try{ inFrame = window.self !== window.top; }catch(e){ inFrame = true; }
+    if(err && err.code === 1 && inFrame) return toast("미리보기에서는 위치를 쓸 수 없어요 — purine-map.vercel.app에서 열어주세요");
+    if(err && err.code === 1) return toast("위치 권한이 거부돼 있어요 — 브라우저·기기 설정에서 허용해 주세요");
+    if(err && err.code === 3) return toast("위치를 잡는 데 시간이 걸려요 — 잠시 후 다시 눌러주세요");
+    toast("지금 위치를 확인할 수 없어요 — 잠시 후 다시 시도해 주세요");
+  }, {timeout:10000, maximumAge:60000});
 });
 
 /* ── 실지도 3단 폴백: 네이버 지도 SDK → Leaflet+OSM → 내장 캔버스 ── */
@@ -2665,7 +2672,7 @@ lnkGo.addEventListener("click", () => {
 });
 
 // ── PWA: 서비스워커 + 파비콘 + safe-area 방어 ──
-const APP_VER = "v19.9.6";
+const APP_VER = "v19.9.7";
 document.getElementById("ver").textContent = "퓨린 신호등 " + APP_VER;
 
 function toastAction(msg, label, fn){
